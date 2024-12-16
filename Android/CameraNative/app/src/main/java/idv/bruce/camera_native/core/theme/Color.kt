@@ -1,4 +1,4 @@
-package idv.bruce.camera_native.ui.theme
+package idv.bruce.camera_native.core.theme
 
 import androidx.compose.ui.graphics.Color
 

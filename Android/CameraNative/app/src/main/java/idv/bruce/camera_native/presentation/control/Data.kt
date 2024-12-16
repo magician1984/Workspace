@@ -9,4 +9,4 @@ sealed class ControlPageIntent : UserIntent{
     class SwitchMode(val previewMode: PreviewMode) : ControlPageIntent()
 }
 
-data class ControlPageState(val avmStatus: AVMStatus = AVMStatus.NONE) : UiState
+data class ControlPageState(val avmStatus: AVMStatus = AVMStatus.None) : UiState

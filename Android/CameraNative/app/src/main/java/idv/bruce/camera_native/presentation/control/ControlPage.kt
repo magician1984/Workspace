@@ -23,9 +23,10 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import idv.bruce.camera_native.R
+import idv.bruce.camera_native.core.configure.AVMConfigure
 import idv.bruce.camera_native.domain.entity.AVMStatus
 import idv.bruce.camera_native.domain.entity.PreviewMode
-import idv.bruce.camera_native.ui.theme.CameraNativeTheme
+import idv.bruce.camera_native.core.theme.CameraNativeTheme
 
 @Composable
 fun ControlPage(
@@ -36,21 +37,28 @@ fun ControlPage(
 
     val buttons = remember {
         listOf(
-            Pair(PreviewMode.GRID, R.drawable.baseline_grid_view_24),
-            Pair(PreviewMode.AVM, R.drawable.baseline_surround_sound_24),
-            Pair(PreviewMode.SINGLE(0), R.drawable.baseline_filter_1_24),
-            Pair(PreviewMode.SINGLE(1), R.drawable.baseline_filter_2_24),
-            Pair(PreviewMode.SINGLE(2), R.drawable.baseline_filter_3_24),
-            Pair(PreviewMode.SINGLE(3), R.drawable.baseline_filter_4_24)
+            Pair(PreviewMode.Grid, R.drawable.baseline_grid_view_24),
+            Pair(PreviewMode.Avm, R.drawable.baseline_surround_sound_24),
+            Pair(PreviewMode.Single(AVMConfigure.CameraModeCode.CAM_0), R.drawable.baseline_filter_1_24),
+            Pair(PreviewMode.Single(AVMConfigure.CameraModeCode.CAM_1), R.drawable.baseline_filter_2_24),
+            Pair(PreviewMode.Single(AVMConfigure.CameraModeCode.CAM_2), R.drawable.baseline_filter_3_24),
+            Pair(PreviewMode.Single(AVMConfigure.CameraModeCode.CAM_3), R.drawable.baseline_filter_4_24)
         )
     }
 
     Row(modifier = modifier) {
         buttons.forEach {
+            val isActive : Boolean = when(val status = state.value.avmStatus){
+                is AVMStatus.Streaming-> status.previewMode == it.first
+                else -> false
+            }
+            val isEnable : Boolean = AVMConfigure.activatePreviewModes.contains(it.first)
+
             StateButton(
                 modifier = Modifier,
                 res = ImageVector.vectorResource(id = it.second),
-                isActive = (state.value.avmStatus is AVMStatus.STREAMING) && ((state.value.avmStatus as AVMStatus.STREAMING).previewMode == it.first),
+                isActive = isActive,
+                enable = isEnable,
                 onClick = {
                     model.handleIntent(ControlPageIntent.SwitchMode(it.first))
                 }
@@ -66,7 +74,7 @@ private fun StateButton(
     res: ImageVector,
     highlightColor: Color = MaterialTheme.colorScheme.primary,
     isActive: Boolean = false,
-    isProgress: Boolean = false,
+    enable : Boolean = true,
     onClick: (() -> Unit) = {}
 ) {
     Box(
@@ -75,32 +83,20 @@ private fun StateButton(
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(size = 12.dp)) // To make it a circular button, can be changed to another shape
             .background(
                 color = when {
-                    isProgress -> Color.Gray.copy(alpha = 0.4f)  // Grey out if progress
+                    !enable -> Color.Gray.copy(alpha = 0.4f)  // Grey out if progress
                     isActive -> highlightColor // Active state highlights the button
                     else -> MaterialTheme.colorScheme.surface // Default background
                 }
             )
-            .clickable(enabled = !isProgress) { onClick.invoke() }
+            .clickable(enabled = enable) { onClick.invoke() }
             .padding(16.dp) // Adjust padding as needed
     ) {
-        if (isProgress) {
-            // Show a progress indicator (like a CircularProgressIndicator) when the button is in progress state
-            CircularProgressIndicator(
-                modifier = Modifier
-                    .size(24.dp)
-                    .align(Alignment.Center),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        } else {
-            // Display the VectorDrawable icon
-            Icon(
-                painter = rememberVectorPainter(image = res),
-                contentDescription = null,
-                modifier = Modifier.align(Alignment.Center),
-                tint = if (isActive) Color.White else MaterialTheme.colorScheme.onSurface
-            )
-        }
+        Icon(
+            painter = rememberVectorPainter(image = res),
+            contentDescription = null,
+            modifier = Modifier.align(Alignment.Center),
+            tint = if (isActive) Color.White else MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
@@ -111,8 +107,8 @@ private fun StateButtonPreview() {
         StateButton(
             modifier = Modifier,
             res = ImageVector.vectorResource(id = R.drawable.baseline_filter_1_24),
-            isProgress = false,
-            isActive = true
+            isActive = true,
+            enable = false
         )
     }
 }
