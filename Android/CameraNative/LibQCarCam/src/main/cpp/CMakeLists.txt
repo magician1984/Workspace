@@ -11,8 +11,6 @@ cmake_minimum_required(VERSION 3.22.1)
 # build script scope).
 project("qcarcam_jni")
 
-add_subdirectory("glm")
-
 add_subdirectory("qcarcam_client")
 
 add_subdirectory("qcarcam_jni")

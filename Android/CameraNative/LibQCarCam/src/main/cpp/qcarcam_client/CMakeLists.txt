@@ -6,7 +6,6 @@ find_library(EGL_LIB EGL)
 find_library(GLES2_LIB GLESv2)
 
 target_link_libraries("qcarcam_client"
-        glm
         ${EGL_LIB}
         ${GLES2_LIB}
 )
