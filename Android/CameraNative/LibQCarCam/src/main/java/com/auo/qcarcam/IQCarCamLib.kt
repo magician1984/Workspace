@@ -9,34 +9,19 @@ interface IQCarCamLib {
     }
 
     @Throws(QCarCamException::class)
-    fun init()
-
-    @Throws(QCarCamException::class)
-    fun release()
-
-    @Throws(QCarCamException::class)
     fun attachSurface(surface: Surface)
 
     @Throws(QCarCamException::class)
     fun detachSurface()
 
     @Throws(QCarCamException::class)
-    fun start()
+    fun switchMode(mode : Int)
 
     @Throws(QCarCamException::class)
-    fun resume()
+    fun rotate(xAngle: Float)
 
     @Throws(QCarCamException::class)
-    fun pause()
-
-    @Throws(QCarCamException::class)
-    fun stop()
-
-    @Throws(QCarCamException::class)
-    fun zoom(value: Float)
-
-    @Throws(QCarCamException::class)
-    fun rotate(xAngle: Float, yAngle: Float)
+    fun getCurrentMode(): Int
 
     fun setCameraEventListener(listener: CameraEventListener)
 }

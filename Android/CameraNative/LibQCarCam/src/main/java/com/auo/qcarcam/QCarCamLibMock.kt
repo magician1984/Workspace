@@ -16,14 +16,6 @@ class QCarCamLibMock : IQCarCamLib {
         }
     }
 
-    override fun init() {
-        onFunctionCall()
-    }
-
-    override fun release() {
-        onFunctionCall()
-    }
-
     override fun attachSurface(surface: Surface) {
         onFunctionCall(surface)
     }
@@ -32,28 +24,17 @@ class QCarCamLibMock : IQCarCamLib {
         onFunctionCall()
     }
 
-    override fun start() {
+    override fun switchMode(mode: Int) {
+        onFunctionCall(mode)
+    }
+
+    override fun rotate(xAngle: Float) {
+        onFunctionCall(xAngle)
+    }
+
+    override fun getCurrentMode(): Int {
         onFunctionCall()
-    }
-
-    override fun resume() {
-        onFunctionCall()
-    }
-
-    override fun pause() {
-        onFunctionCall()
-    }
-
-    override fun stop() {
-        onFunctionCall()
-    }
-
-    override fun zoom(value: Float) {
-        onFunctionCall(value)
-    }
-
-    override fun rotate(xAngle: Float, yAngle: Float) {
-        onFunctionCall(xAngle, yAngle)
+        return 0
     }
 
     override fun setCameraEventListener(listener: IQCarCamLib.CameraEventListener) {

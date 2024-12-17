@@ -1,3 +1,6 @@
+import com.android.build.gradle.internal.cxx.configure.abiOf
+import com.android.build.gradle.tasks.NativeBuildSystem
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.jetbrains.kotlin.android)
@@ -12,6 +15,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+
+        ndk{
+            version = "26.1.10909125"
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
+        }
     }
 
     buildTypes {
@@ -28,6 +36,7 @@ android {
             path("src/main/cpp/CMakeLists.txt")
             version = "3.22.1"
         }
+
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8

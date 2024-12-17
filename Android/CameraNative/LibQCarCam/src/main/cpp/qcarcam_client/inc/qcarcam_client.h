@@ -4,51 +4,62 @@
 
 #ifndef AVM_QCARCAM_CLIENT_H
 #define AVM_QCARCAM_CLIENT_H
+
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
 #include <android/log.h>
 
-#define TAG "QCarCamClient"
-// Helper macro for logging
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
+
+enum Mode : int {
+    AVM = -2,
+    GRID,
+    CAM_0,
+    CAM_1,
+    CAM_2,
+    CAM_3
+};
 
 class QCarCamClient {
 private:
     int camId;
-    void *screenHndl;
+    ANativeWindow *screenHndl;
+    Mode currentMode;
 
-    EGLDisplay eglDisplay;
-    EGLSurface eglSurface;
-    EGLContext eglContext;
-    GLuint program;
+    void* qcarcamCtx;
 
-    GLuint gTexture;
-    GLuint gVertexBuffer;
+    int qcarcam_init();
+
+    int qcarcam_query();
+
+    int qcarcam_start();
+
+    int qcarcam_stop();
+
+    int qcarcam_release();
+
+    int qcarcam_rotate(float angle);
+
+    int screen_init();
+
+    int screen_release();
+
+    int screen_renderer();
+
 public:
     QCarCamClient();
+
+    int SetSurface(ANativeWindow *window);
+
+    int StartPreview(Mode mode);
 
     //Release GL
     ~QCarCamClient();
 
-    //memHndl is a ANativeWindow
-    //Initialize GL
-    int open(int camId, void *memHndl);
+    int Rotate(float angleX);
 
-    //Start to renderer
-    int start();
-
-    // TODO
-    int pause();
-
-    // TODO
-    int resume();
-
-    // Stop renderer, clean screen
-    int stop();
-    int rotate(float angleX);
+    int GetCurrentMode();
 };
 
 #endif //AVM_QCARCAM_CLIENT_H
