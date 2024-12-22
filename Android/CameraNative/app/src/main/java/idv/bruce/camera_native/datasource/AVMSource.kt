@@ -2,13 +2,12 @@ package idv.bruce.camera_native.datasource
 
 import android.view.Surface
 import com.auo.qcarcam.IQCarCamLib
-import com.auo.qcarcam.QCarCamLibImpl
-import com.auo.qcarcam.QCarCamLibMock
+import com.auo.qcarcam.QCarCamLibAndroid
 import idv.bruce.camera_native.core.configure.AVMConfigure
 import idv.bruce.camera_native.domain.datasource.IAVMSource
 
 class AVMSource : IAVMSource {
-    private val camLib : IQCarCamLib = QCarCamLibImpl()
+    private val camLib : IQCarCamLib = QCarCamLibAndroid()
 
     private var callback : IAVMSource.OnStatusChangeListener? = null
 
