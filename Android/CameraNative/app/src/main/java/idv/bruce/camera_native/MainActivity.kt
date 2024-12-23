@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun initialize() {
-        avmSource = AVMSource()
+        avmSource = AVMSource(this)
 
         controlModel = ControlModel(
             switchMode = UseCaseSwitchMode(avmSource),

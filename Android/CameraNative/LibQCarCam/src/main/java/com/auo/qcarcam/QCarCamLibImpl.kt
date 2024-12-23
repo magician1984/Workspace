@@ -1,12 +1,30 @@
 package com.auo.qcarcam
 
+import android.content.Context
 import android.view.Surface
+import com.auo.qcarcam.exception.QCarCamException
 
-class QCarCamLibImpl : IQCarCamLib {
-    companion object {
-        init {
-            System.loadLibrary("qcarcam_jni")
-        }
+class QCarCamLibImpl(context: Context) : IQCarCamLib {
+
+    companion object{
+        private var libLoaded : Boolean = false
+        private const val SERVICE_NAME = "vendor.qti.automotive.qcarcam2"
+    }
+
+    inner class NativeLibLoadFailedException : QCarCamException("Native Lib Load Failed")
+
+    init {
+//        try{
+//            System.loadLibrary("qcarcam_jni")
+//            libLoaded = true
+//        }catch (e : SecurityException){
+//            Log.e("QCarCamLibImpl", "Load Library Failed: ${e.message}")
+//            throw NativeLibLoadFailedException()
+//        }catch (e : UnsatisfiedLinkError){
+//            Log.e("QCarCamLibImpl", "Load Library Failed: ${e.message}")
+//            throw NativeLibLoadFailedException()
+//        }
+        context.getSystemService(SERVICE_NAME)
     }
 
     override fun attachSurface(surface: Surface) {
