@@ -4,16 +4,21 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.camera2.*
+import android.hardware.camera2.params.OutputConfiguration
+import android.hardware.camera2.params.SessionConfiguration
 import android.os.Handler
 import android.os.HandlerThread
+import android.util.Log
 import android.view.Surface
 import androidx.core.app.ActivityCompat
 import com.auo.qcarcam.exception.QCarCamException
+import java.util.concurrent.Executors
 
 
 class QCarCamLibAndroid(private val context: Context) : IQCarCamLib {
 
-    private var cameraManager: CameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+    private var cameraManager: CameraManager =
+        context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
     private var cameraDevice: CameraDevice? = null
     private var captureSession: CameraCaptureSession? = null
     private var previewSurface: Surface? = null
@@ -28,7 +33,7 @@ class QCarCamLibAndroid(private val context: Context) : IQCarCamLib {
         private const val CAMERA_REQUEST_CODE = 101
     }
 
-    class QCarCamAndroidException(msg : String) : QCarCamException(msg)
+    class QCarCamAndroidException(msg: String) : QCarCamException(msg)
 
     init {
         setupBackgroundThread()
@@ -43,6 +48,7 @@ class QCarCamLibAndroid(private val context: Context) : IQCarCamLib {
     private fun getFirstCameraId(): String? {
         try {
             for (cameraId in cameraManager.cameraIdList) {
+                Log.d(TAG, "Camera ID: $cameraId")
                 val characteristics = cameraManager.getCameraCharacteristics(cameraId)
                 val facing = characteristics.get(CameraCharacteristics.LENS_FACING)
                 if (facing == CameraCharacteristics.LENS_FACING_BACK) {
@@ -51,6 +57,9 @@ class QCarCamLibAndroid(private val context: Context) : IQCarCamLib {
             }
             return cameraManager.cameraIdList[0]
         } catch (e: CameraAccessException) {
+            e.printStackTrace()
+            return null
+        } catch (e: ArrayIndexOutOfBoundsException) {
             e.printStackTrace()
             return null
         }
@@ -93,7 +102,6 @@ class QCarCamLibAndroid(private val context: Context) : IQCarCamLib {
             } ?: run {
                 throw QCarCamAndroidException("No camera available")
             }
-
         } catch (e: CameraAccessException) {
             throw QCarCamAndroidException("Error opening camera: ${e.message}")
         }
@@ -114,23 +122,44 @@ class QCarCamLibAndroid(private val context: Context) : IQCarCamLib {
                             addTarget(surface)
                         }
 
-                    camera.createCaptureSession(
-                        listOf(surface),
-                        object : CameraCaptureSession.StateCallback() {
-                            override fun onConfigured(session: CameraCaptureSession) {
-                                captureSession = session
-                                updatePreview(captureRequestBuilder)
-                            }
+                    val config: SessionConfiguration =
+                        SessionConfiguration(
+                            SessionConfiguration.SESSION_REGULAR,
+                            listOf(OutputConfiguration(surface)),
+                            Executors.newSingleThreadExecutor(),
+                            object : CameraCaptureSession.StateCallback() {
+                                override fun onConfigured(session: CameraCaptureSession) {
+                                    captureSession = session
+                                    updatePreview(captureRequestBuilder)
+                                }
 
-                            override fun onConfigureFailed(session: CameraCaptureSession) {
-                                cameraEventListener?.onEvent(
-                                    3,
-                                    "Failed to configure camera session"
-                                )
+                                override fun onConfigureFailed(session: CameraCaptureSession) {
+                                    cameraEventListener?.onEvent(
+                                        3,
+                                        "Failed to configure camera session"
+                                    )
+                                }
                             }
-                        },
-                        backgroundHandler
-                    )
+                        )
+                    camera.createCaptureSession(config)
+
+//                    camera.createCaptureSession(
+//                        listOf(surface),
+//                        object : CameraCaptureSession.StateCallback() {
+//                            override fun onConfigured(session: CameraCaptureSession) {
+//                                captureSession = session
+//                                updatePreview(captureRequestBuilder)
+//                            }
+//
+//                            override fun onConfigureFailed(session: CameraCaptureSession) {
+//                                cameraEventListener?.onEvent(
+//                                    3,
+//                                    "Failed to configure camera session"
+//                                )
+//                            }
+//                        },
+//                        backgroundHandler
+//                    )
                 } catch (e: CameraAccessException) {
                     cameraEventListener?.onEvent(4, "Error starting preview: ${e.message}")
                 }

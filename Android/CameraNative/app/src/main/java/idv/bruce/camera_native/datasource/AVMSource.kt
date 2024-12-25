@@ -1,25 +1,35 @@
 package idv.bruce.camera_native.datasource
 
-import android.content.Context
+import android.util.Log
 import android.view.Surface
 import com.auo.qcarcam.IQCarCamLib
-import com.auo.qcarcam.QCarCamLibAndroid
-import com.auo.qcarcam.QCarCamLibImpl
+import com.auo.qcarcam.QCarCamLibAIDL
 import com.auo.qcarcam.QCarCamLibMock
 import com.auo.qcarcam.exception.QCarCamException
 import idv.bruce.camera_native.core.configure.AVMConfigure
 import idv.bruce.camera_native.domain.datasource.IAVMSource
 
-class AVMSource(context: Context) : IAVMSource {
+class AVMSource() : IAVMSource {
+    companion object{
+        private const val TAG = "AVMSource"
+    }
+
     private val camLib : IQCarCamLib = try{
-        QCarCamLibImpl(context)
+        Log.d(TAG, "Using AIDL")
+        QCarCamLibAIDL()
     }catch (e : QCarCamException){
+        Log.e(TAG, "Failed to create QCarCamLib instance: ${e.message}")
         QCarCamLibMock()
     }
 
     private var callback : IAVMSource.OnStatusChangeListener? = null
 
     private var currentMode : Int = AVMConfigure.defaultPreviewMode.modeInd
+
+
+    init {
+        camLib.setCameraEventListener { code, msg -> Log.d("AVMSource", "onEvent: $code, $msg") }
+    }
 
     override fun attachSurface(surface: Surface) {
         camLib.attachSurface(surface)

@@ -10,6 +10,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/LibQCarCam" />
+            <option value="$PROJECT_DIR$/NeededSystemAPI" />
             <option value="$PROJECT_DIR$/app" />
           </set>
         </option>

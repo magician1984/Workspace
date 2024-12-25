@@ -1,22 +1,12 @@
 add_library("qcarcam_client" STATIC src/qcarcam_client.cpp)
 
-add_library(qcxosal SHARED IMPORTED)
+add_library(qcx_aidl_client SHARED IMPORTED)
 
 set_target_properties(
-        qcxosal
+        qcx_aidl_client
         PROPERTIES
         IMPORTED_LOCATION
-        ${PROJECT_SOURCE_DIR}/qcarcam_api/prebuild/${CMAKE_ANDROID_ARCH_ABI}/libqcxosal.so)
-
-add_library(qcxclient SHARED IMPORTED)
-
-set_target_properties(
-        qcxclient
-        PROPERTIES
-        IMPORTED_LOCATION
-        ${PROJECT_SOURCE_DIR}/qcarcam_api/prebuild/${CMAKE_ANDROID_ARCH_ABI}/libqcxclient.so)
-
-
+        ${PROJECT_SOURCE_DIR}/prebuilt/${CMAKE_ANDROID_ARCH_ABI}/libqcx_aidl_client.so)
 
 include_directories(inc)
 
@@ -26,8 +16,7 @@ find_library(EGL_LIB EGL)
 find_library(GLES2_LIB GLESv2)
 
 target_link_libraries("qcarcam_client"
-        qcxosal
-        qcxclient
+        qcx_aidl_client
         ${EGL_LIB}
         ${GLES2_LIB}
 )
