@@ -16,6 +16,6 @@ class AVMService : Service() {
         super.onCreate()
         // Initialize your service here
 
-        val lib : IQCarCamLib = QCarCamLibAIDL(this)
+        val lib : IQCarCamLib = QCarCamLibAIDL()
     }
 }

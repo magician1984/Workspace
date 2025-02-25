@@ -91,8 +91,8 @@ private fun View(
     controlView: @Composable (Modifier) -> Unit
 ) {
     CameraNativeTheme {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            Box(modifier = Modifier.padding(innerPadding)) {
+        Scaffold { innerPadding ->
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                 rendererView(Modifier.fillMaxSize())
                 controlView(Modifier.align(Alignment.BottomCenter))
             }
@@ -103,11 +103,10 @@ private fun View(
 @Composable
 @Preview(device = Devices.TABLET)
 private fun MainPreview() {
-    val model: ControlModel = ControlModel()
-    View(rendererView = { Box(modifier = it.background(Color.Blue)) }, controlView = {
+    View(rendererView = { PreviewPage(model = PreviewModel()) }, controlView = {
         ControlPage(
             modifier = it,
-            model = model
+            model = ControlModel()
         )
     })
 }

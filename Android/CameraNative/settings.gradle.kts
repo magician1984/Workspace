@@ -23,3 +23,4 @@ rootProject.name = "CameraNative"
 include(":app")
 include(":LibQCarCam")
 include(":NeededSystemAPI")
+include(":myapplication")
