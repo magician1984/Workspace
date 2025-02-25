@@ -1,21 +1,22 @@
-package idv.bruce.camera_native.domain.usecase
+package com.auo.performancetester.domain.usecase
 
-import android.view.Surface
-import idv.bruce.camera_native.domain.entity.AVMStatus
-import idv.bruce.camera_native.domain.entity.PreviewMode
+import com.auo.performancetester.domain.entity.CloneMethod
+import com.auo.performancetester.domain.entity.IData
 
-interface IUseCaseSwitchMode{
-    operator fun invoke(mode : PreviewMode)
+interface IUseCase
+
+interface IUseCaseStartTest:IUseCase{
+    operator fun invoke(method: CloneMethod, size:Long, count:Int)
 }
 
-interface IUseCaseStartPreview{
-    operator fun invoke(surface : Surface)
+interface IUseCaseListenEvents:IUseCase{
+    operator fun invoke(callback : (IData) -> Unit)
 }
 
-interface IUseCaseStopPreview{
+interface IUseCaseExit:IUseCase{
     operator fun invoke()
 }
 
-interface IUseCaseSyncStatus{
-    operator fun invoke(callback : (AVMStatus)->Unit)
+interface IUseCaseInitialize:IUseCase{
+    operator fun invoke()
 }

@@ -4,7 +4,7 @@ import com.auo.performancetester.domain.entity.CloneMethod
 import com.auo.performancetester.domain.entity.IData
 import java.io.File
 
-interface ITestSource {
+interface IDataSource {
     interface ICloneMethod{
         fun clone(source: File, target: File)
     }
@@ -15,7 +15,7 @@ interface ITestSource {
 
     var eventListener : EventListener?
 
-    val results:List<IData.TestResult>
+    fun initialize()
 
     fun startTest(method:CloneMethod, size : Long, count : Int)
 }
