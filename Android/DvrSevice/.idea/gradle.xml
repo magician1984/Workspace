@@ -9,8 +9,10 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/AppDvr" />
+            <option value="$PROJECT_DIR$/LibDvrCore" />
             <option value="$PROJECT_DIR$/PerformanceTester" />
-            <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/SrvDvr" />
           </set>
         </option>
         <option name="resolveExternalAnnotations" value="false" />

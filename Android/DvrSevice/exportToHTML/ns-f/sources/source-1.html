@@ -1,0 +1,264 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > ControlModel</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.auo.performancetester.presentation.control</a>
+</div>
+
+<h1>Coverage Summary for Class: ControlModel (com.auo.performancetester.presentation.control)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ControlModel</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/9)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/6)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/47)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">ControlModel$Companion</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/3)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/3)
+  </span>
+</td>
+  </tr>
+  <tr>
+    <td class="name">ControlModel$handleIntent$1</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/10)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/6)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/13)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/16)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/56)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.auo.performancetester.presentation.control
+&nbsp;
+&nbsp;import android.util.Log
+&nbsp;import com.auo.performancetester.domain.entity.CloneMethod
+&nbsp;import com.auo.performancetester.domain.usecase.IUseCaseExit
+&nbsp;import com.auo.performancetester.domain.usecase.IUseCaseStartTest
+&nbsp;import com.auo.performancetester.presentation.IModel
+&nbsp;import kotlinx.coroutines.Dispatchers
+&nbsp;import kotlinx.coroutines.Job
+&nbsp;import kotlinx.coroutines.flow.MutableStateFlow
+&nbsp;import kotlinx.coroutines.flow.StateFlow
+&nbsp;import kotlinx.coroutines.flow.update
+&nbsp;import kotlinx.coroutines.launch
+&nbsp;import kotlin.coroutines.CoroutineContext
+&nbsp;
+<b class="nc">&nbsp;class ControlModel(private val exitUseCase : IUseCaseExit, private val testUseCase : IUseCaseStartTest) : IModel&lt;ControlPageIntent, ControlPageState&gt; {</b>
+&nbsp;    private companion object{
+<b class="nc">&nbsp;        val CloneMethodItems: List&lt;Item.MethodItem&gt; = listOf(</b>
+<b class="nc">&nbsp;            Item.MethodItem(CloneMethod.BufferIO),</b>
+<b class="nc">&nbsp;            Item.MethodItem(CloneMethod.FileChannel),</b>
+&nbsp;        )
+&nbsp;
+<b class="nc">&nbsp;        val SizeItems: List&lt;Item.SizeItem&gt; = listOf(</b>
+<b class="nc">&nbsp;            Item.SizeItem(52428800),</b>
+<b class="nc">&nbsp;            Item.SizeItem(104857600),</b>
+<b class="nc">&nbsp;            Item.SizeItem(209715200),</b>
+&nbsp;        )
+&nbsp;
+<b class="nc">&nbsp;        val CountItems: List&lt;Item.CountItem&gt; = listOf(</b>
+<b class="nc">&nbsp;            Item.CountItem(1),</b>
+<b class="nc">&nbsp;            Item.CountItem(5),</b>
+<b class="nc">&nbsp;            Item.CountItem(10),</b>
+<b class="nc">&nbsp;            Item.CountItem(20)</b>
+&nbsp;        )
+&nbsp;    }
+&nbsp;
+<b class="nc">&nbsp;    private val _state : MutableStateFlow&lt;ControlPageState&gt; = MutableStateFlow(ControlPageState(</b>
+<b class="nc">&nbsp;        inProgress = false,</b>
+<b class="nc">&nbsp;        methodSpinner = SpinnerParam(CloneMethodItems, 0),</b>
+<b class="nc">&nbsp;        sizeSpinner = SpinnerParam(SizeItems, 0),</b>
+<b class="nc">&nbsp;        countSpinner = SpinnerParam(CountItems, 0)</b>
+&nbsp;    ))
+&nbsp;
+&nbsp;    override val state: StateFlow&lt;ControlPageState&gt;
+<b class="nc">&nbsp;        get() = _state</b>
+&nbsp;    override val coroutineContext: CoroutineContext
+<b class="nc">&nbsp;        get() = Dispatchers.IO + Job()</b>
+&nbsp;
+&nbsp;    override fun handleIntent(intent: ControlPageIntent) {
+<b class="nc">&nbsp;        launch {</b>
+<b class="nc">&nbsp;            when(intent){</b>
+<b class="nc">&nbsp;                is ControlPageIntent.ExecuteTest -&gt; execute()</b>
+<b class="nc">&nbsp;                is ControlPageIntent.FinishApp -&gt; exitUseCase()</b>
+<b class="nc">&nbsp;                is ControlPageIntent.SelectCount -&gt; updateCountSelect(intent.index)</b>
+<b class="nc">&nbsp;                is ControlPageIntent.SelectMethod -&gt; updateMethodSelect(intent.index)</b>
+<b class="nc">&nbsp;                is ControlPageIntent.SelectSize -&gt; updateSizeSelect(intent.index)</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    private fun execute(){
+<b class="nc">&nbsp;        Log.d(&quot;ControlModel&quot;, &quot;Execute&quot;)</b>
+<b class="nc">&nbsp;        val method = CloneMethodItems[state.value.methodSpinner.selectedIndex].method</b>
+<b class="nc">&nbsp;        val size = SizeItems[state.value.sizeSpinner.selectedIndex].size</b>
+<b class="nc">&nbsp;        val count = CountItems[state.value.countSpinner.selectedIndex].count</b>
+&nbsp;
+<b class="nc">&nbsp;        testUseCase(method, size, count)</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private fun updateMethodSelect(selectedIndex: Int){
+<b class="nc">&nbsp;        _state.update { currentState -&gt;</b>
+<b class="nc">&nbsp;            currentState.copy(methodSpinner = SpinnerParam(CloneMethodItems, selectedIndex))</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    private fun updateSizeSelect(selectedIndex: Int){
+<b class="nc">&nbsp;        _state.update { currentState -&gt;</b>
+<b class="nc">&nbsp;            currentState.copy(sizeSpinner = SpinnerParam(SizeItems, selectedIndex))</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    private fun updateCountSelect(selectedIndex: Int){
+<b class="nc">&nbsp;        _state.update { currentState -&gt;</b>
+<b class="nc">&nbsp;            currentState.copy(countSpinner = SpinnerParam(CountItems, selectedIndex))</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-03-06 13:10</div>
+</div>
+</body>
+</html>
