@@ -1,0 +1,90 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > IUseCaseStartTest</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.auo.performancetester.domain.usecase</a>
+</div>
+
+<h1>Coverage Summary for Class: IUseCaseStartTest (com.auo.performancetester.domain.usecase)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">IUseCaseStartTest</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.auo.performancetester.domain.usecase
+&nbsp;
+&nbsp;import com.auo.performancetester.domain.entity.CloneMethod
+&nbsp;import com.auo.performancetester.domain.entity.IData
+&nbsp;
+&nbsp;interface IUseCase
+&nbsp;
+&nbsp;interface IUseCaseStartTest:IUseCase{
+&nbsp;    operator fun invoke(method: CloneMethod, size:Long, count:Int)
+&nbsp;}
+&nbsp;
+&nbsp;interface IUseCaseListenEvents:IUseCase{
+&nbsp;    operator fun invoke(callback : (IData) -&gt; Unit)
+&nbsp;}
+&nbsp;
+&nbsp;interface IUseCaseExit:IUseCase{
+&nbsp;    operator fun invoke()
+&nbsp;}
+&nbsp;
+&nbsp;interface IUseCaseInitialize:IUseCase{
+&nbsp;    operator fun invoke()
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-03-06 13:10</div>
+</div>
+</body>
+</html>

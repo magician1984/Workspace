@@ -2,7 +2,7 @@ package com.auo.performancetester.domain.usecase
 
 import android.app.Activity
 import com.auo.performancetester.domain.datasource.IDataSource
-import com.auo.performancetester.domain.entity.DvrException
+import com.auo.dvr_core.DvrException
 import com.auo.performancetester.domain.usecase.impl.UseCaseExit
 import com.auo.performancetester.domain.usecase.impl.UseCaseInitialize
 import com.auo.performancetester.domain.usecase.impl.UseCaseListenEvents
@@ -16,7 +16,7 @@ class UseCaseProvider(private val activity: Activity, private val dataSource:IDa
             IUseCaseListenEvents::class -> UseCaseListenEvents(dataSource) as T
             IUseCaseStartTest::class -> UseCaseStartTest(dataSource) as T
             IUseCaseInitialize::class -> UseCaseInitialize(dataSource) as T
-            else -> throw DvrException("UseCaseProvider", "Unsupported")
+            else -> throw com.auo.dvr_core.DvrException("UseCaseProvider", "Unsupported")
         }
     }
 }

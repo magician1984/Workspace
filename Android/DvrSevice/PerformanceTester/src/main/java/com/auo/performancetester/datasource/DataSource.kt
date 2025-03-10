@@ -6,7 +6,7 @@ import com.auo.performancetester.datasource.method.BufferCopyMethod
 import com.auo.performancetester.datasource.method.FileChannelMethod
 import com.auo.performancetester.domain.datasource.IDataSource
 import com.auo.performancetester.domain.entity.CloneMethod
-import com.auo.performancetester.domain.entity.DvrException
+import com.auo.dvr_core.DvrException
 import com.auo.performancetester.domain.entity.IData
 import java.io.File
 import java.io.RandomAccessFile

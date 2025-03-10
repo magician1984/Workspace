@@ -1,0 +1,138 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > SpinnerParam</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.auo.performancetester.presentation.control</a>
+</div>
+
+<h1>Coverage Summary for Class: SpinnerParam (com.auo.performancetester.presentation.control)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">SpinnerParam</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.auo.performancetester.presentation.control
+&nbsp;
+&nbsp;import com.auo.performancetester.domain.entity.CloneMethod
+&nbsp;import com.auo.performancetester.presentation.UiState
+&nbsp;import com.auo.performancetester.presentation.UserIntent
+&nbsp;
+&nbsp;sealed class Item(open val name: String) {
+&nbsp;    class MethodItem(val method: CloneMethod) : Item(method.name)
+&nbsp;    class SizeItem(val size: Long) : Item(&quot;&quot;) {
+&nbsp;        override val name: String
+&nbsp;            get() = &quot;${size.toMB()} MB&quot;
+&nbsp;
+&nbsp;        private fun Long.toMB(): Float = this / 1024f / 1024f
+&nbsp;    }
+&nbsp;
+&nbsp;    class CountItem(val count: Int) : Item(count.toString())
+&nbsp;}
+&nbsp;
+&nbsp;sealed class ControlPageIntent : UserIntent {
+&nbsp;    data object FinishApp : ControlPageIntent()
+&nbsp;    class SelectMethod(val index : Int) : ControlPageIntent()
+&nbsp;    class SelectSize(val index : Int) : ControlPageIntent()
+&nbsp;    class SelectCount(val index : Int) : ControlPageIntent()
+&nbsp;    data object ExecuteTest : ControlPageIntent()
+&nbsp;}
+&nbsp;
+<b class="nc">&nbsp;data class SpinnerParam(val items: List&lt;Item&gt;, val selectedIndex: Int)</b>
+&nbsp;
+&nbsp;data class ControlPageState(
+&nbsp;    val inProgress: Boolean,
+&nbsp;    val methodSpinner: SpinnerParam,
+&nbsp;    val sizeSpinner: SpinnerParam,
+&nbsp;    val countSpinner: SpinnerParam) :
+&nbsp;    UiState
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-03-06 13:10</div>
+</div>
+</body>
+</html>
