@@ -19,6 +19,7 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.auo.performancetester.datasource.DataSource
+import com.auo.performancetester.datasource.PerformanceMonitor
 import com.auo.performancetester.domain.datasource.IDataSource
 import com.auo.performancetester.domain.usecase.IUseCaseExit
 import com.auo.performancetester.domain.usecase.IUseCaseInitialize
@@ -52,7 +53,7 @@ class MainActivity : ComponentActivity() {
 
         Log.d("Main", "InitialDataSource")
 
-        val dataSource = DataSource(context)
+        val dataSource = DataSource(context, PerformanceMonitor.enable())
 
         func(dataSource)
     }

@@ -8,22 +8,19 @@ import java.nio.channels.FileChannel
 import java.nio.channels.NonReadableChannelException
 
 class FileChannelMethod : IDataSource.ICloneMethod {
-    override fun clone(source: File, target: File) {
-        var srcChannel: FileChannel? = null
-        var dstChannel: FileChannel? = null
-
-        try {
-            srcChannel = source.inputStream().channel
-            dstChannel = target.outputStream().channel
-
-            dstChannel.transferFrom(srcChannel, 0, srcChannel.size())
-        } catch (e: IOException) {
-            throw com.auo.dvr_core.DvrException(this.javaClass.name, e.message.toString())
-        } catch (e: NonReadableChannelException) {
-            throw com.auo.dvr_core.DvrException(this.javaClass.name, e.message.toString())
-        } finally {
-            srcChannel?.close()
-            dstChannel?.close()
+    override fun clone(source: List<File>, target: List<File>) {
+        for (i in source.indices) {
+            try {
+                source[i].inputStream().channel.use { srcChannel ->
+                    target[i].outputStream().channel.use { dstChannel ->
+                        dstChannel.transferFrom(srcChannel, 0, srcChannel.size())
+                    }
+                }
+            } catch (e: IOException) {
+                throw DvrException(this.javaClass.name, e.message ?: "Unknown IO Error")
+            } catch (e: NonReadableChannelException) {
+                throw DvrException(this.javaClass.name, e.message ?: "Non-readable channel error")
+            }
         }
     }
 }

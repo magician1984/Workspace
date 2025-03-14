@@ -15,7 +15,8 @@ sealed class IData {
         val fileSize: Long,
         val fileCount: Int,
         val cloneMethod: CloneMethod,
-        val totalTime: Long
+        val totalTime: Long,
+        val performanceData : BlockStat? = null
     ) : IData() {
         override fun toString(): String{
             val df = DecimalFormat("#,##0.00") // Format with commas and 2 decimal places
@@ -29,6 +30,7 @@ sealed class IData {
             Clone method: $cloneMethod
             Total time: ${df.format(totalTimeMs)} ms
             Average time per file: ${df.format(avgTimeMs)} ms
+            ${performanceData?.toString() ?: ""}
         """.trimIndent()
         }
     }

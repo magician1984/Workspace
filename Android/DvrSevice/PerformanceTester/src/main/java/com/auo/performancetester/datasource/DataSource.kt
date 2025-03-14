@@ -7,11 +7,12 @@ import com.auo.performancetester.datasource.method.FileChannelMethod
 import com.auo.performancetester.domain.datasource.IDataSource
 import com.auo.performancetester.domain.entity.CloneMethod
 import com.auo.dvr_core.DvrException
+import com.auo.performancetester.domain.entity.BlockStat
 import com.auo.performancetester.domain.entity.IData
 import java.io.File
 import java.io.RandomAccessFile
 
-class DataSource(private val context : Context) : IDataSource {
+class DataSource(private val context : Context, private val monitor : IDataSource.IPerformanceMonitor) : IDataSource {
     override var eventListener: IDataSource.EventListener? = null
 
     private var sourceFolder : File? = null
@@ -59,21 +60,23 @@ class DataSource(private val context : Context) : IDataSource {
             notifyEvent("Clean up")
             clean(src, dst)
 
-            notifyEvent("Create test files")
+            notifyEvent("Create test files and dst files")
             val files : List<File> = createdTestFiles(src, size, count)
+            val dstFiles : List<File> = createDstFiles(dst, files)
 
             notifyEvent("Start clone test")
             val startTime : Long = System.nanoTime()
 
-            for (file in files)
-                methodImpl.clone(file, File(dst, file.name))
+            monitor.start()
+            methodImpl.clone(files, dstFiles)
+            monitor.stop()
 
             val endTime : Long = System.nanoTime()
 
             val totalTimeNano = startTime - endTime;
             notifyEvent("Clone test finished: $totalTimeNano us")
 
-            notifyResult(IData.TestResult(size, count, method, totalTimeNano))
+            notifyResult(IData.TestResult(size, count, method, totalTimeNano, monitor.getResult()))
         }
     }
 
@@ -105,6 +108,15 @@ class DataSource(private val context : Context) : IDataSource {
         return files
     }
 
+    private fun createDstFiles(folder : File, files : List<File>) : List<File>{
+        val dstFiles : MutableList<File> = mutableListOf()
+
+        files.forEach { file ->
+            dstFiles.add(File(folder, file.name))
+        }
+        return dstFiles
+    }
+
     private fun notifyResult(result:IData.TestResult){
         Log.d("TestResult", result.toString())
         this.eventListener?.onEvent(result)
@@ -125,6 +137,5 @@ class DataSource(private val context : Context) : IDataSource {
                 notifyEvent("Exception happened: $e")
             }
         }
-
     }
 }
