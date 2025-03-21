@@ -1,0 +1,287 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > OnRecordUpdateListener</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.auo.dvr_core</a>
+</div>
+
+<h1>Coverage Summary for Class: OnRecordUpdateListener (com.auo.dvr_core)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+  <tr>
+    <td class="name">OnRecordUpdateListener$Default</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/3)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/3)
+  </span>
+</td>
+  </tr>
+  <tr>
+    <td class="name">OnRecordUpdateListener$MockitoMock$7b0dN0SD</td>
+  </tr>
+  <tr>
+    <td class="name">OnRecordUpdateListener$MockitoMock$7b0dN0SD$auxiliary$ldeXXEQ4</td>
+  </tr>
+  <tr>
+    <td class="name">OnRecordUpdateListener$MockitoMock$7b0dN0SD$auxiliary$qwdhBmA0</td>
+  </tr>
+  <tr>
+    <td class="name">OnRecordUpdateListener$Stub</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/12)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/20)
+  </span>
+</td>
+  </tr>
+  <tr>
+    <td class="name">OnRecordUpdateListener$Stub$Proxy</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/12)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/11)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/12)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/35)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;/*
+&nbsp; * This file is auto-generated.  DO NOT MODIFY.
+&nbsp; */
+&nbsp;package com.auo.dvr_core;
+&nbsp;// Declare any non-default types here with import statements
+&nbsp;public interface OnRecordUpdateListener extends android.os.IInterface
+&nbsp;{
+&nbsp;  /** Default implementation for OnRecordUpdateListener. */
+<b class="nc">&nbsp;  public static class Default implements com.auo.dvr_core.OnRecordUpdateListener</b>
+&nbsp;  {
+&nbsp;    @Override public void onUpdate() throws android.os.RemoteException
+&nbsp;    {
+<b class="nc">&nbsp;    }</b>
+&nbsp;    @Override
+&nbsp;    public android.os.IBinder asBinder() {
+<b class="nc">&nbsp;      return null;</b>
+&nbsp;    }
+&nbsp;  }
+&nbsp;  /** Local-side IPC implementation stub class. */
+&nbsp;  public static abstract class Stub extends android.os.Binder implements com.auo.dvr_core.OnRecordUpdateListener
+&nbsp;  {
+&nbsp;    /** Construct the stub at attach it to the interface. */
+&nbsp;    public Stub()
+<b class="nc">&nbsp;    {</b>
+<b class="nc">&nbsp;      this.attachInterface(this, DESCRIPTOR);</b>
+&nbsp;    }
+&nbsp;    /**
+&nbsp;     * Cast an IBinder object into an com.auo.dvr_core.OnRecordUpdateListener interface,
+&nbsp;     * generating a proxy if needed.
+&nbsp;     */
+&nbsp;    public static com.auo.dvr_core.OnRecordUpdateListener asInterface(android.os.IBinder obj)
+&nbsp;    {
+<b class="nc">&nbsp;      if ((obj==null)) {</b>
+<b class="nc">&nbsp;        return null;</b>
+&nbsp;      }
+<b class="nc">&nbsp;      android.os.IInterface iin = obj.queryLocalInterface(DESCRIPTOR);</b>
+<b class="nc">&nbsp;      if (((iin!=null)&amp;&amp;(iin instanceof com.auo.dvr_core.OnRecordUpdateListener))) {</b>
+<b class="nc">&nbsp;        return ((com.auo.dvr_core.OnRecordUpdateListener)iin);</b>
+&nbsp;      }
+<b class="nc">&nbsp;      return new com.auo.dvr_core.OnRecordUpdateListener.Stub.Proxy(obj);</b>
+&nbsp;    }
+&nbsp;    @Override public android.os.IBinder asBinder()
+&nbsp;    {
+<b class="nc">&nbsp;      return this;</b>
+&nbsp;    }
+&nbsp;    @Override public boolean onTransact(int code, android.os.Parcel data, android.os.Parcel reply, int flags) throws android.os.RemoteException
+&nbsp;    {
+<b class="nc">&nbsp;      java.lang.String descriptor = DESCRIPTOR;</b>
+<b class="nc">&nbsp;      if (code &gt;= android.os.IBinder.FIRST_CALL_TRANSACTION &amp;&amp; code &lt;= android.os.IBinder.LAST_CALL_TRANSACTION) {</b>
+<b class="nc">&nbsp;        data.enforceInterface(descriptor);</b>
+&nbsp;      }
+<b class="nc">&nbsp;      switch (code)</b>
+&nbsp;      {
+&nbsp;        case INTERFACE_TRANSACTION:
+&nbsp;        {
+<b class="nc">&nbsp;          reply.writeString(descriptor);</b>
+<b class="nc">&nbsp;          return true;</b>
+&nbsp;        }
+&nbsp;      }
+<b class="nc">&nbsp;      switch (code)</b>
+&nbsp;      {
+&nbsp;        case TRANSACTION_onUpdate:
+&nbsp;        {
+<b class="nc">&nbsp;          this.onUpdate();</b>
+<b class="nc">&nbsp;          reply.writeNoException();</b>
+&nbsp;          break;
+&nbsp;        }
+&nbsp;        default:
+&nbsp;        {
+<b class="nc">&nbsp;          return super.onTransact(code, data, reply, flags);</b>
+&nbsp;        }
+&nbsp;      }
+<b class="nc">&nbsp;      return true;</b>
+&nbsp;    }
+&nbsp;    private static class Proxy implements com.auo.dvr_core.OnRecordUpdateListener
+&nbsp;    {
+&nbsp;      private android.os.IBinder mRemote;
+&nbsp;      Proxy(android.os.IBinder remote)
+<b class="nc">&nbsp;      {</b>
+<b class="nc">&nbsp;        mRemote = remote;</b>
+&nbsp;      }
+&nbsp;      @Override public android.os.IBinder asBinder()
+&nbsp;      {
+<b class="nc">&nbsp;        return mRemote;</b>
+&nbsp;      }
+&nbsp;      public java.lang.String getInterfaceDescriptor()
+&nbsp;      {
+<b class="nc">&nbsp;        return DESCRIPTOR;</b>
+&nbsp;      }
+&nbsp;      @Override public void onUpdate() throws android.os.RemoteException
+&nbsp;      {
+<b class="nc">&nbsp;        android.os.Parcel _data = android.os.Parcel.obtain();</b>
+<b class="nc">&nbsp;        android.os.Parcel _reply = android.os.Parcel.obtain();</b>
+&nbsp;        try {
+<b class="nc">&nbsp;          _data.writeInterfaceToken(DESCRIPTOR);</b>
+<b class="nc">&nbsp;          boolean _status = mRemote.transact(Stub.TRANSACTION_onUpdate, _data, _reply, 0);</b>
+<b class="nc">&nbsp;          _reply.readException();</b>
+&nbsp;        }
+&nbsp;        finally {
+<b class="nc">&nbsp;          _reply.recycle();</b>
+<b class="nc">&nbsp;          _data.recycle();</b>
+<b class="nc">&nbsp;        }</b>
+&nbsp;      }
+&nbsp;    }
+&nbsp;    static final int TRANSACTION_onUpdate = (android.os.IBinder.FIRST_CALL_TRANSACTION + 0);
+&nbsp;  }
+&nbsp;  public static final java.lang.String DESCRIPTOR = &quot;com.auo.dvr_core.OnRecordUpdateListener&quot;;
+&nbsp;  public void onUpdate() throws android.os.RemoteException;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-03-06 13:10</div>
+</div>
+</body>
+</html>

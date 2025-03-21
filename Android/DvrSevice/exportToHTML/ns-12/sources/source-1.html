@@ -1,0 +1,114 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > IFileManager</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.auo.dvr.manager</a>
+</div>
+
+<h1>Coverage Summary for Class: IFileManager (com.auo.dvr.manager)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+</tr>
+  <tr>
+    <td class="name">IFileManager$IConfig</td>
+  </tr>
+  <tr>
+    <td class="name">IFileManager$MockitoMock$URCFxajJ</td>
+  </tr>
+  <tr>
+    <td class="name">IFileManager$MockitoMock$URCFxajJ$auxiliary$2cQwpFpx</td>
+  </tr>
+  <tr>
+    <td class="name">IFileManager$MockitoMock$URCFxajJ$auxiliary$fRIVefYL</td>
+  </tr>
+  <tr>
+    <td class="name">IFileManager$RecordUpdateListener</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.auo.dvr.manager
+&nbsp;
+&nbsp;import com.auo.dvr.RecordFileTypeDef
+&nbsp;import com.auo.dvr.manager.filemanager.IFileManager.IConfig
+&nbsp;import com.auo.dvr_core.RecordFile
+&nbsp;import com.auo.dvr_core.RecordFileType
+&nbsp;import java.io.File
+&nbsp;
+&nbsp;interface IFileManager&lt;T : IConfig&gt; {
+&nbsp;    fun interface RecordUpdateListener{
+&nbsp;        fun onUpdate()
+&nbsp;    }
+&nbsp;
+&nbsp;    interface IConfig{
+&nbsp;        val sourceFolder : File
+&nbsp;        val targetFolder : File
+&nbsp;    }
+&nbsp;
+&nbsp;    var recordUpdateListener: RecordUpdateListener?
+&nbsp;
+&nbsp;    val recordFiles : List&lt;RecordFile&gt;
+&nbsp;
+&nbsp;    fun init(config: T)
+&nbsp;    fun start()
+&nbsp;    fun stop()
+&nbsp;    fun release()
+&nbsp;
+&nbsp;    fun getFilePath(recordFile: RecordFile) : String
+&nbsp;    fun deleteFile(recordFile: RecordFile)
+&nbsp;    fun changType(recordFile: RecordFile, type: RecordFileTypeDef)
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-03-06 13:10</div>
+</div>
+</body>
+</html>

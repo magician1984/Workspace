@@ -1,0 +1,210 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > InfoModel</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.auo.performancetester.presentation.info</a>
+</div>
+
+<h1>Coverage Summary for Class: InfoModel (com.auo.performancetester.presentation.info)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">InfoModel</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/7)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/22)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">InfoModel$handleIntent$1</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/2)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/4)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/10)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/26)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.auo.performancetester.presentation.info
+&nbsp;
+&nbsp;import com.auo.performancetester.domain.entity.IData
+&nbsp;import com.auo.performancetester.domain.usecase.IUseCaseInitialize
+&nbsp;import com.auo.performancetester.domain.usecase.IUseCaseListenEvents
+&nbsp;import com.auo.performancetester.presentation.IModel
+&nbsp;import kotlinx.coroutines.Dispatchers
+&nbsp;import kotlinx.coroutines.Job
+&nbsp;import kotlinx.coroutines.flow.MutableStateFlow
+&nbsp;import kotlinx.coroutines.flow.StateFlow
+&nbsp;import kotlinx.coroutines.flow.update
+&nbsp;import kotlinx.coroutines.launch
+&nbsp;import kotlin.coroutines.CoroutineContext
+&nbsp;
+<b class="nc">&nbsp;class InfoModel(private val listenEvents: IUseCaseListenEvents, private val initialize: IUseCaseInitialize) : IModel&lt;InfoIntent, InfoState&gt; {</b>
+&nbsp;    override val state: StateFlow&lt;InfoState&gt;
+<b class="nc">&nbsp;        get() = _state</b>
+&nbsp;    override val coroutineContext: CoroutineContext
+<b class="nc">&nbsp;        get() = Dispatchers.IO + Job()</b>
+&nbsp;
+<b class="nc">&nbsp;    private val _state : MutableStateFlow&lt;InfoState&gt; = MutableStateFlow(InfoState(emptyList(), emptyList()))</b>
+&nbsp;
+&nbsp;    override fun handleIntent(intent: InfoIntent) {
+<b class="nc">&nbsp;        launch {</b>
+<b class="nc">&nbsp;            when(intent){</b>
+<b class="nc">&nbsp;                is InfoIntent.PagePrepare -&gt;{</b>
+<b class="nc">&nbsp;                    listenEvents(::onEvent)</b>
+<b class="nc">&nbsp;                    initialize()</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    private fun onEvent(data : IData){
+<b class="nc">&nbsp;        when(data){</b>
+<b class="nc">&nbsp;            is IData.EventMessage -&gt; updateMessage(data)</b>
+<b class="nc">&nbsp;            is IData.TestResult -&gt; updateResult(data)</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    private fun updateMessage(message : IData.EventMessage){
+<b class="nc">&nbsp;        _state.update { currentState -&gt;</b>
+<b class="nc">&nbsp;            currentState.copy(messages = currentState.messages + message)</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    private fun updateResult(result : IData.TestResult){
+<b class="nc">&nbsp;        _state.update { currentState -&gt;</b>
+<b class="nc">&nbsp;            currentState.copy(results = currentState.results + result)</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-03-06 13:10</div>
+</div>
+</body>
+</html>

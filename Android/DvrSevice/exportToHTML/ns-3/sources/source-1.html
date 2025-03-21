@@ -1,0 +1,119 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > EventFileException</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.auo.dvr.manager.filemanager.exception</a>
+</div>
+
+<h1>Coverage Summary for Class: EventFileException (com.auo.dvr.manager.filemanager.exception)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">EventFileException</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.auo.dvr.manager.filemanager.exception
+&nbsp;
+&nbsp;import com.auo.dvr.manager.filemanager.stander.FileManagerState
+&nbsp;import com.auo.dvr_core.DvrException
+&nbsp;import java.io.File
+&nbsp;
+&nbsp;open class FileManagerException(message : String) : DvrException(&quot;FileManager&quot;, message)
+&nbsp;
+&nbsp;class WrongStateFlowException(currentState: FileManagerState, newState : FileManagerState) : FileManagerException(&quot;Wrong state flow: ${currentState.name} -&gt; ${newState.name}&quot;)
+&nbsp;
+&nbsp;class WrongStateException(currentState: FileManagerState, expectState : FileManagerState, isNot : Boolean = false) : FileManagerException(&quot;Wrong state: required: ${if(isNot) &quot;not&quot; else &quot;&quot;} ${expectState.name}, actual: ${currentState.name}&quot;)
+&nbsp;
+&nbsp;class FileNotExistException(path : String) : FileManagerException(&quot;File not exist: $path&quot;)
+&nbsp;
+<b class="nc">&nbsp;class EventFileException(val file : File) : FileManagerException(&quot;Get event file: ${file.name}&quot;)</b>
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-03-06 13:10</div>
+</div>
+</body>
+</html>

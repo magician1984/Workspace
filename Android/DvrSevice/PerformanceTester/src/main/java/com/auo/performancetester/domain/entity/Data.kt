@@ -1,33 +1,42 @@
-package idv.bruce.camera_native.domain.entity
+package com.auo.performancetester.domain.entity
 
-import idv.bruce.camera_native.core.configure.AVMConfigure
+import android.icu.text.DecimalFormat
 
-sealed class PreviewMode(val modeInd : Int) {
-    data object Avm : PreviewMode(AVMConfigure.CameraModeCode.AVM)
-    data object Grid : PreviewMode(AVMConfigure.CameraModeCode.GRID)
-    class Single(index: Int) : PreviewMode(index)
+enum class CloneMethod {
+    BufferIO,
+    FileChannel,
+    DMA,
+    Shell,
+}
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
 
-        other as PreviewMode
+sealed class IData {
+    data class TestResult(
+        val fileSize: Long,
+        val fileCount: Int,
+        val cloneMethod: CloneMethod,
+        val totalTime: Long,
+        val performanceData : BlockStat? = null
+    ) : IData() {
+        override fun toString(): String{
+            val df = DecimalFormat("#,##0.00") // Format with commas and 2 decimal places
+            val fileSizeMB = fileSize.toDouble() / 1024.0 / 1024.0
+            val totalTimeMs = totalTime.toDouble() / 1_000_000.0 // Convert nanoseconds to milliseconds
+            val avgTimeMs = totalTimeMs / fileCount
 
-        return modeInd == other.modeInd
+            return """
+            File size: ${df.format(fileSizeMB)} MB
+            File count: $fileCount
+            Clone method: $cloneMethod
+            Total time: ${df.format(totalTimeMs)} ms
+            Average time per file: ${df.format(avgTimeMs)} ms
+            ${performanceData?.toString() ?: ""}
+        """.trimIndent()
+        }
     }
 
-    override fun hashCode(): Int {
-        return modeInd
+    data class EventMessage(val message: String) : IData() {
+        override fun toString(): String = message
     }
 }
 
-sealed class ErrorType(val msg: String) {
-    class CameraError(msg: String) : ErrorType(msg)
-    class RendererError(msg: String) : ErrorType(msg)
-}
-
-sealed class AVMStatus {
-    data object None : AVMStatus()
-    class Streaming(val previewMode: PreviewMode) : AVMStatus()
-    class Error(val errorType: ErrorType) : AVMStatus()
-}

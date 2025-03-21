@@ -1,15 +1,26 @@
-package idv.bruce.camera_native.presentation.control
+package com.auo.performancetester.presentation.control
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,61 +31,70 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import idv.bruce.camera_native.R
-import idv.bruce.camera_native.core.configure.AVMConfigure
-import idv.bruce.camera_native.core.theme.CameraNativeTheme
-import idv.bruce.camera_native.domain.entity.AVMStatus
-import idv.bruce.camera_native.domain.entity.PreviewMode
-import idv.bruce.camera_native.presentation.IModel
+import com.auo.performancetester.R
+import com.auo.performancetester.presentation.IModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlin.coroutines.CoroutineContext
+
 
 @Composable
 fun ControlPage(
     modifier: Modifier = Modifier,
-    model : IModel<ControlPageIntent, ControlPageState>
+    model: IModel<ControlPageIntent, ControlPageState>
 ) {
-    val state = model.state.collectAsState()
+    val state by model.state.collectAsState()
 
-    val buttons = remember {
-        listOf(
-            Pair(PreviewMode.Grid, R.drawable.baseline_grid_view_24),
-            Pair(PreviewMode.Avm, R.drawable.baseline_surround_sound_24),
-            Pair(PreviewMode.Single(AVMConfigure.CameraModeCode.CAM_0), R.drawable.baseline_filter_1_24),
-            Pair(PreviewMode.Single(AVMConfigure.CameraModeCode.CAM_1), R.drawable.baseline_filter_2_24),
-            Pair(PreviewMode.Single(AVMConfigure.CameraModeCode.CAM_2), R.drawable.baseline_filter_3_24),
-            Pair(PreviewMode.Single(AVMConfigure.CameraModeCode.CAM_3), R.drawable.baseline_filter_4_24)
+    Row(
+        modifier = modifier
+            .wrapContentHeight()
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
+        Spinner(
+            modifier = Modifier.weight(1.0f, true),
+            items = state.methodSpinner.items,
+            selectedIndex = state.methodSpinner.selectedIndex
         )
-    }
+        { index -> model.handleIntent(ControlPageIntent.SelectMethod(index)) }
 
-    Row(modifier = modifier) {
-        buttons.forEach {
-            val isActive : Boolean = when(val status = state.value.avmStatus){
-                is AVMStatus.Streaming-> status.previewMode == it.first
-                else -> false
-            }
-            val isEnable : Boolean = AVMConfigure.activatePreviewModes.contains(it.first)
 
-            StateButton(
-                modifier = Modifier,
-                res = ImageVector.vectorResource(id = it.second),
-                isActive = isActive,
-                enable = isEnable,
-                onClick = {
-                    model.handleIntent(ControlPageIntent.SwitchMode(it.first))
-                }
-            )
+        Spinner(
+            modifier = Modifier.weight(1.0f, true),
+            items = state.sizeSpinner.items,
+            selectedIndex = state.sizeSpinner.selectedIndex
+        ) { index ->
+            model.handleIntent(ControlPageIntent.SelectSize(index))
         }
+
+
+        Spinner(
+            modifier = Modifier.weight(1.0f, true),
+            items = state.countSpinner.items,
+            selectedIndex = state.countSpinner.selectedIndex
+        ) { index ->
+            model.handleIntent(ControlPageIntent.SelectCount(index))
+        }
+
+        ImageButton(
+            onClick = { model.handleIntent(ControlPageIntent.ExecuteTest) },
+            icon = ImageVector.vectorResource(id = R.drawable.baseline_not_started_24)
+        )
+
+        ImageButton(
+            onClick = { model.handleIntent(ControlPageIntent.FinishApp) },
+            icon = ImageVector.vectorResource(id = R.drawable.baseline_exit_to_app_24)
+        )
     }
 }
 
-
 @Composable
-private fun StateButton(
+fun ImageButton(
     modifier: Modifier = Modifier,
-    res: ImageVector,
-    highlightColor: Color = MaterialTheme.colorScheme.primary,
-    isActive: Boolean = false,
-    enable : Boolean = true,
-    onClick: (() -> Unit) = {}
+    onClick: () -> Unit,
+    enable: Boolean = true,
+    icon: ImageVector
 ) {
     Box(
         modifier = modifier
@@ -83,7 +103,6 @@ private fun StateButton(
             .background(
                 color = when {
                     !enable -> Color.Gray.copy(alpha = 0.4f)  // Grey out if progress
-                    isActive -> highlightColor // Active state highlights the button
                     else -> MaterialTheme.colorScheme.surface // Default background
                 }
             )
@@ -91,31 +110,97 @@ private fun StateButton(
             .padding(16.dp) // Adjust padding as needed
     ) {
         Icon(
-            painter = rememberVectorPainter(image = res),
+            painter = rememberVectorPainter(image = icon),
             contentDescription = null,
-            modifier = Modifier.align(Alignment.Center),
-            tint = if (isActive) Color.White else MaterialTheme.colorScheme.onSurface
+            modifier = Modifier.align(Alignment.Center)
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Preview
-private fun StateButtonPreview() {
-    CameraNativeTheme {
-        StateButton(
-            modifier = Modifier,
-            res = ImageVector.vectorResource(id = R.drawable.baseline_filter_1_24),
-            isActive = true,
-            enable = false
-        )
+fun Spinner(
+    modifier: Modifier = Modifier,
+    items: List<Item>,
+    selectedIndex: Int,
+    onItemSelected: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var selectedIndexState by remember { mutableStateOf(selectedIndex) }
+
+    Box(modifier = modifier) {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            TextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(),
+                readOnly = true,
+                value = items.getOrElse(selectedIndexState) { Item.CountItem(0) }.name,
+                onValueChange = {},
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                items.forEachIndexed { index, item ->
+                    DropdownMenuItem(
+                        text = { Text(item.name) },
+                        onClick = {
+                            selectedIndexState = index
+                            onItemSelected(index)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 
+@Preview(device = Devices.TABLET)
 @Composable
-@Preview(device = Devices.PIXEL_TABLET)
-private fun ControlPagePreview() {
-    CameraNativeTheme {
-        ControlPage(model = ControlModel())
+fun ImageButtonPreview() {
+    ImageButton(
+        onClick = {},
+        enable = false,
+        icon = ImageVector.vectorResource(id = R.drawable.baseline_exit_to_app_24)
+    )
+}
+
+@Preview(device = Devices.TABLET)
+@Composable
+fun ControlPagePreview() {
+    val model = object : IModel<ControlPageIntent, ControlPageState> {
+        override val state: StateFlow<ControlPageState>
+            get() = MutableStateFlow(
+                ControlPageState(
+                    false,
+                    SpinnerParam(listOf(), 0),
+                    SpinnerParam(listOf(), 0),
+                    SpinnerParam(listOf(), 0)
+                )
+            )
+        override val coroutineContext: CoroutineContext
+            get() = TODO("Not yet implemented")
+
+        override fun handleIntent(intent: ControlPageIntent) {
+
+        }
+
     }
+    ControlPage(modifier = Modifier.background(Color.White), model = model)
+}
+
+@Preview(device = Devices.TABLET)
+@Composable
+fun SpinnerPreview() {
+    Spinner(
+        modifier = Modifier,
+        items = listOf(),
+        selectedIndex = 0,
+        onItemSelected = {})
 }

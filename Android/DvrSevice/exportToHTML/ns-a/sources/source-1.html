@@ -1,0 +1,264 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > DataSource</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.auo.performancetester.datasource</a>
+</div>
+
+<h1>Coverage Summary for Class: DataSource (com.auo.performancetester.datasource)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">DataSource</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/9)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/30)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/67)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">DataSource$WhenMappings</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/9)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/30)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/67)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.auo.performancetester.datasource
+&nbsp;
+&nbsp;import android.content.Context
+&nbsp;import android.util.Log
+&nbsp;import com.auo.performancetester.datasource.method.BufferCopyMethod
+&nbsp;import com.auo.performancetester.datasource.method.FileChannelMethod
+&nbsp;import com.auo.performancetester.domain.datasource.IDataSource
+&nbsp;import com.auo.performancetester.domain.entity.CloneMethod
+&nbsp;import com.auo.dvr_core.DvrException
+&nbsp;import com.auo.performancetester.domain.entity.IData
+&nbsp;import java.io.File
+&nbsp;import java.io.RandomAccessFile
+&nbsp;
+<b class="nc">&nbsp;class DataSource(private val context : Context) : IDataSource {</b>
+<b class="nc">&nbsp;    override var eventListener: IDataSource.EventListener? = null</b>
+&nbsp;
+&nbsp;    private var sourceFolder : File? = null
+&nbsp;
+&nbsp;    private var targetFolder : File? = null
+&nbsp;
+&nbsp;    override fun initialize() {
+<b class="nc">&nbsp;        notifyEvent(&quot;Start initialize&quot;)</b>
+<b class="nc">&nbsp;        this.sourceFolder = File(File(context.filesDir, &quot;files_src&quot;), &quot;source&quot;)</b>
+<b class="nc">&nbsp;        notifyEvent(&quot;Source folder created: ${this.sourceFolder?.absolutePath}&quot;)</b>
+&nbsp;
+<b class="nc">&nbsp;        notifyEvent(&quot;Query USB storage&quot;)</b>
+<b class="nc">&nbsp;        val mountFolder = File(&quot;/mnt/media_rw&quot;)</b>
+&nbsp;
+<b class="nc">&nbsp;        if(!mountFolder.exists()){</b>
+<b class="nc">&nbsp;            notifyEvent(&quot;USB storage root not found&quot;)</b>
+&nbsp;            return
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        mountFolder.listFiles().apply {</b>
+<b class="nc">&nbsp;            if(this.isNullOrEmpty()){</b>
+<b class="nc">&nbsp;                notifyEvent(&quot;USB storage not found&quot;)</b>
+&nbsp;                return
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            notifyEvent(&quot;Use USB storage: ${this[0].absolutePath}&quot;)</b>
+&nbsp;
+<b class="nc">&nbsp;            this@DataSource.targetFolder = File(this[0], &quot;target&quot;)</b>
+&nbsp;
+<b class="nc">&nbsp;            notifyEvent(&quot;Initialize finished&quot;)</b>
+<b class="nc">&nbsp;        }</b>
+&nbsp;
+&nbsp;
+&nbsp;    }
+&nbsp;
+&nbsp;    override fun startTest(method:CloneMethod, size : Long, count : Int) {
+<b class="nc">&nbsp;        initialCheck{ src, dst -&gt;</b>
+<b class="nc">&nbsp;            notifyEvent(&quot;Select clone method&quot;)</b>
+<b class="nc">&nbsp;            val methodImpl = when(method){</b>
+<b class="nc">&nbsp;                CloneMethod.BufferIO -&gt; BufferCopyMethod()</b>
+<b class="nc">&nbsp;                CloneMethod.FileChannel -&gt; FileChannelMethod()</b>
+<b class="nc">&nbsp;                else -&gt; throw DvrException(this.javaClass.name, &quot;Unsupported&quot;)</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            notifyEvent(&quot;Clean up&quot;)</b>
+<b class="nc">&nbsp;            clean(src, dst)</b>
+&nbsp;
+<b class="nc">&nbsp;            notifyEvent(&quot;Create test files&quot;)</b>
+<b class="nc">&nbsp;            val files : List&lt;File&gt; = createdTestFiles(src, size, count)</b>
+&nbsp;
+<b class="nc">&nbsp;            notifyEvent(&quot;Start clone test&quot;)</b>
+<b class="nc">&nbsp;            val startTime : Long = System.nanoTime()</b>
+&nbsp;
+<b class="nc">&nbsp;            for (file in files)</b>
+<b class="nc">&nbsp;                methodImpl.clone(file, File(dst, file.name))</b>
+&nbsp;
+<b class="nc">&nbsp;            val endTime : Long = System.nanoTime()</b>
+&nbsp;
+<b class="nc">&nbsp;            val totalTimeNano = startTime - endTime;</b>
+<b class="nc">&nbsp;            notifyEvent(&quot;Clone test finished: $totalTimeNano us&quot;)</b>
+&nbsp;
+<b class="nc">&nbsp;            notifyResult(IData.TestResult(size, count, method, totalTimeNano))</b>
+<b class="nc">&nbsp;        }</b>
+&nbsp;    }
+&nbsp;
+&nbsp;     private fun clean(src:File, dst:File) {
+<b class="nc">&nbsp;        if(src.exists())</b>
+<b class="nc">&nbsp;            src.deleteRecursively()</b>
+&nbsp;
+<b class="nc">&nbsp;        if(dst.exists())</b>
+<b class="nc">&nbsp;            dst.deleteRecursively()</b>
+&nbsp;
+<b class="nc">&nbsp;        src.mkdirs()</b>
+<b class="nc">&nbsp;        dst.mkdirs()</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private fun createdTestFiles(folder : File, size: Long, count: Int): List&lt;File&gt;{
+<b class="nc">&nbsp;        val files : MutableList&lt;File&gt; = mutableListOf()</b>
+&nbsp;
+&nbsp;        var file: File
+&nbsp;
+<b class="nc">&nbsp;        for (i in 0 until count) {</b>
+<b class="nc">&nbsp;            file = File(folder, &quot;test_file_$i.tmp&quot;)</b>
+<b class="nc">&nbsp;            RandomAccessFile(file, &quot;rw&quot;).apply {</b>
+<b class="nc">&nbsp;                setLength(size)</b>
+<b class="nc">&nbsp;                close()</b>
+<b class="nc">&nbsp;            }</b>
+<b class="nc">&nbsp;            files.add(file)</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return files</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private fun notifyResult(result:IData.TestResult){
+<b class="nc">&nbsp;        Log.d(&quot;TestResult&quot;, result.toString())</b>
+<b class="nc">&nbsp;        this.eventListener?.onEvent(result)</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private fun notifyEvent(msg: String){
+<b class="nc">&nbsp;        Log.d(&quot;DataSource&quot;, msg)</b>
+<b class="nc">&nbsp;        this.eventListener?.onEvent(IData.EventMessage(msg))</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private inline fun initialCheck(func: (File, File)-&gt;Unit){
+<b class="nc">&nbsp;        if(this.sourceFolder == null || this.targetFolder == null)</b>
+<b class="nc">&nbsp;            notifyEvent(&quot;DataSource not initialized&quot;)</b>
+&nbsp;        else{
+<b class="nc">&nbsp;            try{</b>
+<b class="nc">&nbsp;                func(this.sourceFolder!!, this.targetFolder!!)</b>
+<b class="nc">&nbsp;            }catch (e : DvrException){</b>
+<b class="nc">&nbsp;                notifyEvent(&quot;Exception happened: $e&quot;)</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-03-06 13:10</div>
+</div>
+</body>
+</html>

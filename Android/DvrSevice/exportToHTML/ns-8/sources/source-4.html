@@ -1,0 +1,226 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > RecordFile</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.auo.dvr_core</a>
+</div>
+
+<h1>Coverage Summary for Class: RecordFile (com.auo.dvr_core)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">RecordFile</td>
+<td class="coverageStat">
+  <span class="percent">
+    20%
+  </span>
+  <span class="absValue">
+    (1/5)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/28)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    2.9%
+  </span>
+  <span class="absValue">
+    (1/34)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">RecordFile$1</td>
+<td class="coverageStat">
+  <span class="percent">
+    33.3%
+  </span>
+  <span class="absValue">
+    (1/3)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    20%
+  </span>
+  <span class="absValue">
+    (1/5)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    25%
+  </span>
+  <span class="absValue">
+    (2/8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/28)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    5.1%
+  </span>
+  <span class="absValue">
+    (2/39)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;/*
+&nbsp; * This file is auto-generated.  DO NOT MODIFY.
+&nbsp; */
+&nbsp;package com.auo.dvr_core;
+&nbsp;/**
+&nbsp; * RecordFileInfo
+&nbsp; *  This class is used to store information about a record file.
+&nbsp; *  @param name:The name of the record file.
+&nbsp; *  @param location: The location of the camera that recorded the file.
+&nbsp; *  @param createTime: The time when the record was actual created.
+&nbsp; *  @param type: The type of the record file. Normal: normal, lock: locked by user, playing: on playing, protected: locked automatically.
+&nbsp; *  @param isCloned: Whether the file has been cloned or not.
+&nbsp; *  *
+&nbsp; */
+<b class="nc">&nbsp;public class RecordFile implements android.os.Parcelable</b>
+&nbsp;{
+&nbsp;  public java.lang.String name;
+&nbsp;  public byte location;
+<b class="nc">&nbsp;  public long createTime = 0L;</b>
+&nbsp;  public byte type;
+<b class="nc">&nbsp;  public boolean isCloned = false;</b>
+<b class="fc">&nbsp;  public static final android.os.Parcelable.Creator&lt;RecordFile&gt; CREATOR = new android.os.Parcelable.Creator&lt;RecordFile&gt;() {</b>
+&nbsp;    @Override
+&nbsp;    public RecordFile createFromParcel(android.os.Parcel _aidl_source) {
+<b class="nc">&nbsp;      RecordFile _aidl_out = new RecordFile();</b>
+<b class="nc">&nbsp;      _aidl_out.readFromParcel(_aidl_source);</b>
+<b class="nc">&nbsp;      return _aidl_out;</b>
+&nbsp;    }
+&nbsp;    @Override
+&nbsp;    public RecordFile[] newArray(int _aidl_size) {
+<b class="nc">&nbsp;      return new RecordFile[_aidl_size];</b>
+&nbsp;    }
+&nbsp;  };
+&nbsp;  @Override public final void writeToParcel(android.os.Parcel _aidl_parcel, int _aidl_flag)
+&nbsp;  {
+<b class="nc">&nbsp;    int _aidl_start_pos = _aidl_parcel.dataPosition();</b>
+<b class="nc">&nbsp;    _aidl_parcel.writeInt(0);</b>
+<b class="nc">&nbsp;    _aidl_parcel.writeString(name);</b>
+<b class="nc">&nbsp;    _aidl_parcel.writeByte(location);</b>
+<b class="nc">&nbsp;    _aidl_parcel.writeLong(createTime);</b>
+<b class="nc">&nbsp;    _aidl_parcel.writeByte(type);</b>
+<b class="nc">&nbsp;    _aidl_parcel.writeInt(((isCloned)?(1):(0)));</b>
+<b class="nc">&nbsp;    int _aidl_end_pos = _aidl_parcel.dataPosition();</b>
+<b class="nc">&nbsp;    _aidl_parcel.setDataPosition(_aidl_start_pos);</b>
+<b class="nc">&nbsp;    _aidl_parcel.writeInt(_aidl_end_pos - _aidl_start_pos);</b>
+<b class="nc">&nbsp;    _aidl_parcel.setDataPosition(_aidl_end_pos);</b>
+&nbsp;  }
+&nbsp;  public final void readFromParcel(android.os.Parcel _aidl_parcel)
+&nbsp;  {
+<b class="nc">&nbsp;    int _aidl_start_pos = _aidl_parcel.dataPosition();</b>
+<b class="nc">&nbsp;    int _aidl_parcelable_size = _aidl_parcel.readInt();</b>
+&nbsp;    try {
+<b class="nc">&nbsp;      if (_aidl_parcelable_size &lt; 4) throw new android.os.BadParcelableException(&quot;Parcelable too small&quot;);;</b>
+<b class="nc">&nbsp;      if (_aidl_parcel.dataPosition() - _aidl_start_pos &gt;= _aidl_parcelable_size) return;</b>
+<b class="nc">&nbsp;      name = _aidl_parcel.readString();</b>
+<b class="nc">&nbsp;      if (_aidl_parcel.dataPosition() - _aidl_start_pos &gt;= _aidl_parcelable_size) return;</b>
+<b class="nc">&nbsp;      location = _aidl_parcel.readByte();</b>
+<b class="nc">&nbsp;      if (_aidl_parcel.dataPosition() - _aidl_start_pos &gt;= _aidl_parcelable_size) return;</b>
+<b class="nc">&nbsp;      createTime = _aidl_parcel.readLong();</b>
+<b class="nc">&nbsp;      if (_aidl_parcel.dataPosition() - _aidl_start_pos &gt;= _aidl_parcelable_size) return;</b>
+<b class="nc">&nbsp;      type = _aidl_parcel.readByte();</b>
+<b class="nc">&nbsp;      if (_aidl_parcel.dataPosition() - _aidl_start_pos &gt;= _aidl_parcelable_size) return;</b>
+<b class="nc">&nbsp;      isCloned = (0!=_aidl_parcel.readInt());</b>
+&nbsp;    } finally {
+<b class="nc">&nbsp;      if (_aidl_start_pos &gt; (Integer.MAX_VALUE - _aidl_parcelable_size)) {</b>
+<b class="nc">&nbsp;        throw new android.os.BadParcelableException(&quot;Overflow in the size of parcelable&quot;);</b>
+&nbsp;      }
+<b class="nc">&nbsp;      _aidl_parcel.setDataPosition(_aidl_start_pos + _aidl_parcelable_size);</b>
+<b class="nc">&nbsp;    }</b>
+&nbsp;  }
+&nbsp;  @Override
+&nbsp;  public int describeContents() {
+<b class="nc">&nbsp;    int _mask = 0;</b>
+<b class="nc">&nbsp;    return _mask;</b>
+&nbsp;  }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-03-06 13:10</div>
+</div>
+</body>
+</html>

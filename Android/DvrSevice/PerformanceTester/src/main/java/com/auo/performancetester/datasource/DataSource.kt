@@ -1,72 +1,103 @@
 package com.auo.performancetester.datasource
 
+import android.content.Context
+import android.util.Log
 import com.auo.performancetester.datasource.method.BufferCopyMethod
 import com.auo.performancetester.datasource.method.FileChannelMethod
-import com.auo.performancetester.domain.datasource.ITestSource
+import com.auo.performancetester.domain.datasource.IDataSource
 import com.auo.performancetester.domain.entity.CloneMethod
-import com.auo.performancetester.domain.entity.DvrException
+import com.auo.dvr_core.DvrException
+import com.auo.performancetester.domain.entity.BlockStat
 import com.auo.performancetester.domain.entity.IData
 import java.io.File
 import java.io.RandomAccessFile
 
-class TestSource(private val sourceFolder : File, private val targetFolder : File) : ITestSource {
-    override var eventListener: ITestSource.EventListener? = null
+class DataSource(private val context : Context, private val monitor : IDataSource.IPerformanceMonitor) : IDataSource {
+    override var eventListener: IDataSource.EventListener? = null
 
-    override val results: List<IData.TestResult>
-        get() = mResults
+    private var sourceFolder : File? = null
 
-    private var mResults : MutableList<IData.TestResult> = mutableListOf()
+    private var targetFolder : File? = null
+
+    override fun initialize() {
+        notifyEvent("Start initialize")
+        this.sourceFolder = File(File(context.filesDir, "files_src"), "source")
+        notifyEvent("Source folder created: ${this.sourceFolder?.absolutePath}")
+
+        notifyEvent("Query USB storage")
+        val mountFolder = File("/mnt/media_rw")
+
+        if(!mountFolder.exists()){
+            notifyEvent("USB storage root not found")
+            return
+        }
+
+        mountFolder.listFiles().apply {
+            if(this.isNullOrEmpty()){
+                notifyEvent("USB storage not found")
+                return
+            }
+
+            notifyEvent("Use USB storage: ${this[0].absolutePath}")
+
+            this@DataSource.targetFolder = File(this[0], "target")
+
+            notifyEvent("Initialize finished")
+        }
+
+
+    }
 
     override fun startTest(method:CloneMethod, size : Long, count : Int) {
-        notifyEvent("Select clone method")
-        val methodImpl = when(method){
-            CloneMethod.BufferIO -> BufferCopyMethod()
-            CloneMethod.FileChannel -> FileChannelMethod()
-            else -> throw DvrException(this.javaClass.name, "Unsupported")
-        }
+        initialCheck{ src, dst ->
+            notifyEvent("Select clone method")
+            val methodImpl = when(method){
+                CloneMethod.BufferIO -> BufferCopyMethod()
+                CloneMethod.FileChannel -> FileChannelMethod()
+                else -> throw DvrException(this.javaClass.name, "Unsupported")
+            }
 
-        notifyEvent("Clean up")
-        clean()
+            notifyEvent("Clean up")
+            clean(src, dst)
 
-        notifyEvent("Create test files")
-        val files : List<File> = createdTestFiles(size, count)
+            notifyEvent("Create test files and dst files")
+            val files : List<File> = createdTestFiles(src, size, count)
+            val dstFiles : List<File> = createDstFiles(dst, files)
 
-        val times = mutableListOf<Long>()
-
-        notifyEvent("Start clone test")
-        for (file in files) {
+            notifyEvent("Start clone test")
             val startTime : Long = System.nanoTime()
-            methodImpl.clone(file, File(this.targetFolder, file.name))
+
+            monitor.start()
+            methodImpl.clone(files, dstFiles)
+            monitor.stop()
+
             val endTime : Long = System.nanoTime()
-            times.add(endTime - startTime)
-        }
 
-        notifyEvent("Clone test finished")
+            val totalTimeNano = startTime - endTime;
+            notifyEvent("Clone test finished: $totalTimeNano us")
 
-        IData.TestResult(size, count, method, times.sum()).apply {
-            mResults.add(this)
-            notifyResult(this)
+            notifyResult(IData.TestResult(size, count, method, totalTimeNano, monitor.getResult()))
         }
     }
 
-     private fun clean() {
-        if(this.sourceFolder.exists())
-            this.sourceFolder.deleteRecursively()
+     private fun clean(src:File, dst:File) {
+        if(src.exists())
+            src.deleteRecursively()
 
-        if(this.targetFolder.exists())
-            this.targetFolder.deleteRecursively()
+        if(dst.exists())
+            dst.deleteRecursively()
 
-        sourceFolder.mkdirs()
-        targetFolder.mkdirs()
+        src.mkdirs()
+        dst.mkdirs()
     }
 
-    private fun createdTestFiles(size: Long, count: Int): List<File>{
+    private fun createdTestFiles(folder : File, size: Long, count: Int): List<File>{
         val files : MutableList<File> = mutableListOf()
 
         var file: File
 
         for (i in 0 until count) {
-            file = File(sourceFolder, "test_file_$i.tmp")
+            file = File(folder, "test_file_$i.tmp")
             RandomAccessFile(file, "rw").apply {
                 setLength(size)
                 close()
@@ -77,7 +108,34 @@ class TestSource(private val sourceFolder : File, private val targetFolder : Fil
         return files
     }
 
-    private fun notifyResult(result:IData.TestResult) = this.eventListener?.onEvent(result)
+    private fun createDstFiles(folder : File, files : List<File>) : List<File>{
+        val dstFiles : MutableList<File> = mutableListOf()
 
-    private fun notifyEvent(msg: String) = this.eventListener?.onEvent(IData.EventMessage(msg))
+        files.forEach { file ->
+            dstFiles.add(File(folder, file.name))
+        }
+        return dstFiles
+    }
+
+    private fun notifyResult(result:IData.TestResult){
+        Log.d("TestResult", result.toString())
+        this.eventListener?.onEvent(result)
+    }
+
+    private fun notifyEvent(msg: String){
+        Log.d("DataSource", msg)
+        this.eventListener?.onEvent(IData.EventMessage(msg))
+    }
+
+    private inline fun initialCheck(func: (File, File)->Unit){
+        if(this.sourceFolder == null || this.targetFolder == null)
+            notifyEvent("DataSource not initialized")
+        else{
+            try{
+                func(this.sourceFolder!!, this.targetFolder!!)
+            }catch (e : DvrException){
+                notifyEvent("Exception happened: $e")
+            }
+        }
+    }
 }
