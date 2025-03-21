@@ -22,9 +22,12 @@ interface IFileManager {
     fun stop()
     fun release()
 
+    // Hold to frozen the file operation until release
     fun holdFile(recordFile: RecordFile)
     fun releaseFile(recordFile: RecordFile)
     fun getFilePath(recordFile: RecordFile) : String
+
+
     fun deleteFile(recordFile: RecordFile)
     fun changType(recordFile: RecordFile, type: FileType)
     fun lockFile(recordFile: RecordFile)

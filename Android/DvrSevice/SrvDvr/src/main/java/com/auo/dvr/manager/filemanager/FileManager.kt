@@ -55,6 +55,14 @@ class FileManager internal constructor(injector: FileManagerInjector): IFileMana
         }
     }
 
+    override fun holdFile(recordFile: RecordFile) {
+        TODO("Not yet implemented")
+    }
+
+    override fun releaseFile(recordFile: RecordFile) {
+        TODO("Not yet implemented")
+    }
+
     override fun getFilePath(recordFile: RecordFile): String = fileControl { pool ->
         pool.getRecordFile(recordFile.hashCode())?.file?.absolutePath ?: throw FileNotExistException(recordFile.name)
     }

@@ -1,10 +1,11 @@
 package com.auo.dvr.manager.filemanager.detector
 
 import android.os.FileObserver
-import com.auo.dvr.manager.filemanager.standard.IFileDetector
+import com.auo.dvr.manager.filemanager.IFileDetector
 import java.io.File
 
-open class StandardFileDetector(private val root : File, private val fileExtension:String, private val eventFileExtension:String) : IFileDetector {
+open class FileDetector(private val root : File, private val fileExtension:String, private val eventFileExtension:String) :
+    IFileDetector {
 
     override var onFileCreated: ((file: File) -> Unit)? = null
 
