@@ -3,8 +3,7 @@ package com.auo.dvr
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
-import com.auo.dvr.manager.filemanager.IFileManager
-import com.auo.dvr.manager.filemanager.standard.StandardFileManager
+import com.auo.dvr.manager.IFileManager
 import com.auo.dvr.manager.filemanager.standard.StandardFileManagerBuilder
 import com.auo.dvr_core.IDvrService
 
