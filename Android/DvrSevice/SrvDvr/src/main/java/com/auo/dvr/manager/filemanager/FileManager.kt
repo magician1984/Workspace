@@ -13,8 +13,8 @@ class FileManager internal constructor(injector: FileManagerInjector): IFileMana
     override var recordUpdateListener: IFileManager.RecordUpdateListener? = null
 
     override val recordFiles: List<RecordFile>
-        get() = fileControl { pool ->
-            return RecordFileInstance.toRecordFileList(pool.recordFiles)
+        get() = (mInjector.cacheRepo.files + mInjector.fileRepo.files).map {
+            RecordFileInstance.toRecordFile(it)
         }
 
     private var mState : FileManagerState = FileManagerState.None
@@ -30,7 +30,9 @@ class FileManager internal constructor(injector: FileManagerInjector): IFileMana
     override fun init(config: FileManagerConfig) {
         stateFlow(expectState = FileManagerState.None, newState = FileManagerState.Ready){
             mInjector.apply {
-                pool.clear()
+                cacheRepo.setOnCacheFullListener{
+
+                }
                 fileDetector.onFileCreated = this@FileManager::onFileCreated
                 fileDetector.onFileClosed = this@FileManager::onFileClosed
             }
