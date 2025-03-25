@@ -6,7 +6,7 @@ import com.auo.dvr_core.RecordFile
 import java.io.File
 import java.nio.file.Files
 
-internal data class RecordFileInstance(private val recordFile: RecordFile, val info: Info) {
+internal data class RecordFileInstance(private val recordFile: RecordFile, var info: Info) {
     companion object{
         fun toRecordFileList(recordFileInstances: List<RecordFileInstance>) : List<RecordFile> = recordFileInstances.map { it.recordFile }
         fun toRecordFile(recordFileInstance: RecordFileInstance) : RecordFile = recordFileInstance.recordFile
@@ -14,6 +14,12 @@ internal data class RecordFileInstance(private val recordFile: RecordFile, val i
 
     interface Info{
         val file : File?
+
+        companion object{
+            fun empty() : Info = object : Info{
+                override val file: File? = null
+            }
+        }
     }
 
     val id : Int = hashCode()

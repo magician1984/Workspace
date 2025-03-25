@@ -2,47 +2,28 @@ package com.auo.dvr.manager.filemanager.operator
 
 import com.auo.dvr.RecordFileInstance
 import com.auo.dvr.manager.filemanager.FileInfo
-import com.auo.dvr.manager.filemanager.IFileOperator
+import com.auo.dvr.manager.filemanager.IRepo
+import com.auo.dvr.manager.filemanager.operator.task.DeleteTask
 import com.auo.dvr.manager.filemanager.operator.task.LockTask
+import com.auo.dvr.manager.filemanager.operator.task.MoveTask
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantLock
 
-internal class FileOperator : IFileOperator {
+internal class FileOperator : IRepo.IFileOperator {
     companion object {
         private const val MAX_OPERATOR_THREAD = 4
     }
 
-    internal abstract class IOperatorTask(val id: Int) : Runnable {
-        private var isDone: AtomicBoolean = AtomicBoolean(false)
+    private val executorService: ExecutorService = Executors.newFixedThreadPool(MAX_OPERATOR_THREAD, object : ThreadFactory{
+        private val index : AtomicInteger = AtomicInteger(0)
 
-        private var linked: IOperatorTask? = null
+        override fun newThread(r: Runnable?): Thread = Thread(r, "FileOperator-${index.getAndIncrement()}")
+    })
 
-        override fun run() {
-
-            process()
-
-            isDone.set(true)
-            linked?.run()
-        }
-
-        protected abstract fun process()
-
-        fun link(task: IOperatorTask): Boolean {
-            return if (linked == null) {
-                if (isDone.get())
-                    false
-                else {
-                    linked = task
-                    true
-                }
-            } else {
-                linked!!.link(task)
-            }
-        }
-    }
-
-    private val executorService: ExecutorService = Executors.newFixedThreadPool(MAX_OPERATOR_THREAD)
+    private val lockerList : HashMap<String, ReentrantLock> = HashMap()
 
     private val taskMap: HashMap<Int, IOperatorTask> = HashMap()
 
@@ -52,15 +33,18 @@ internal class FileOperator : IFileOperator {
         if (currentLockFile != null)
             return false
 
-        currentLockFile = LockTask(recordFile, timeout).also {
-            push(it)
-        }
+        currentLockFile = LockTask(recordFile, timeout)
+
+        pushOrLink(currentLockFile!!)
+
+        currentLockFile?.waitForStart()
 
         return true
     }
 
+
     override fun unlock(recordFile: RecordFileInstance): Boolean {
-        if (currentLockFile?.id != recordFile.id)
+        if (currentLockFile?.recordFile!!.id != recordFile.id)
             return false
 
         currentLockFile?.unlock()
@@ -73,19 +57,35 @@ internal class FileOperator : IFileOperator {
         dest: FileInfo,
         samePartition: Boolean
     ): Boolean {
-        TODO("Not yet implemented")
+        pushOrLink(MoveTask(recordFile, dest, samePartition))
+        return true
     }
 
     override fun delete(recordFile: RecordFileInstance): Boolean {
-        TODO("Not yet implemented")
+        pushOrLink(DeleteTask(recordFile))
+        return true
     }
 
-    private fun push(task : IOperatorTask){
-        val taskRoot : IOperatorTask? = taskMap[task.id]
+    private fun pushOrLink(task : IOperatorTask){
+        val taskRoot : IOperatorTask? = taskMap[task.recordFile.id]
 
         if(taskRoot?.link(task) != true) {
-            taskMap[task.id] = task
-            executorService.submit(task)
+            taskMap[task.recordFile.id] = task
+            executorService.submit{
+                val key = Thread.currentThread().name
+                val lock = getLock(key)
+                task.summit(lock)
+            }
         }
+    }
+
+    private fun getLock(key : String) : ReentrantLock{
+        var locker = lockerList[key]
+
+        if(locker == null) {
+            locker = ReentrantLock()
+            lockerList[key] = locker
+        }
+        return locker
     }
 }

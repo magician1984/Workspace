@@ -2,8 +2,11 @@ package com.auo.dvr.manager.filemanager
 
 import com.auo.dvr.RecordFileInstance
 import com.auo.dvr.manager.IFileManager
+import com.auo.dvr.manager.filemanager.exception.FileOperatorException
+import com.auo.dvr.manager.filemanager.exception.StateFlowException
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.DvrException
+import com.auo.dvr_core.FileType
 import com.auo.dvr_core.RecordFile
 import java.io.File
 import java.util.EnumMap
@@ -13,7 +16,7 @@ class FileManager internal constructor(injector: FileManagerInjector): IFileMana
     override var recordUpdateListener: IFileManager.RecordUpdateListener? = null
 
     override val recordFiles: List<RecordFile>
-        get() = (mInjector.cacheRepo.files + mInjector.fileRepo.files).map {
+        get() = mInjector.repo.files.map {
             RecordFileInstance.toRecordFile(it)
         }
 
@@ -30,9 +33,6 @@ class FileManager internal constructor(injector: FileManagerInjector): IFileMana
     override fun init(config: FileManagerConfig) {
         stateFlow(expectState = FileManagerState.None, newState = FileManagerState.Ready){
             mInjector.apply {
-                cacheRepo.setOnCacheFullListener{
-
-                }
                 fileDetector.onFileCreated = this@FileManager::onFileCreated
                 fileDetector.onFileClosed = this@FileManager::onFileClosed
             }
@@ -53,42 +53,48 @@ class FileManager internal constructor(injector: FileManagerInjector): IFileMana
 
     override fun release() {
         stateFlow(expectState = FileManagerState.Ready, newState = FileManagerState.None) {
-            mInjector.pool.clear()
+            mInjector.repo.clean()
         }
     }
 
     override fun holdFile(recordFile: RecordFile) {
-        TODO("Not yet implemented")
+        val recordFileInstance = mInjector.repo.get(recordFile.hashCode())
+            ?: throw FileNotExistException(recordFile.name)
+
+        if(!mInjector.repo.lock(recordFileInstance))
+            throw FileOperatorException("Lock", "Lock file failed")
     }
 
     override fun releaseFile(recordFile: RecordFile) {
-        TODO("Not yet implemented")
+        val recordFileInstance = mInjector.repo.get(recordFile.hashCode())
+            ?: throw FileNotExistException(recordFile.name)
+
+        if(!mInjector.repo.unlock(recordFileInstance))
+            throw FileOperatorException("Lock", "Lock file failed")
     }
 
-    override fun getFilePath(recordFile: RecordFile): String = fileControl { pool ->
-        pool.getRecordFile(recordFile.hashCode())?.file?.absolutePath ?: throw FileNotExistException(recordFile.name)
+    override fun getFilePath(recordFile: RecordFile): String{
+        return mInjector.repo.get(recordFile.hashCode())?.file?.absolutePath ?: throw FileNotExistException(recordFile.name)
     }
 
-    override fun deleteFile(recordFile: RecordFile): Unit = fileControl { pool ->
-        pool.removeFile(RecordFileInstance.getHash(recordFile))
+    override fun deleteFile(recordFile: RecordFile){
+        val recordFileInstance = mInjector.repo.get(recordFile.hashCode())
+            ?: throw FileNotExistException(recordFile.name)
+
+        if(!mInjector.repo.remove(recordFileInstance.id))
+            throw FileOperatorException("Delete", "Delete file failed")
     }
 
-    override fun changType(recordFile: RecordFile, type: RecordFileTypeDef) : Unit = fileControl { pool ->
-        pool.getRecordFile(RecordFileInstance.getHash(recordFile))?.copy(typeDef = type)?.let { newRecordFile ->
-            pool.updateFile(RecordFileInstance.getHash(recordFile), newRecordFile)
-        }
+    override fun changType(recordFile: RecordFile, type: FileType){
+
     }
 
-    override fun lockFile(recordFile: RecordFile) : Unit = fileControl {pool->
-        pool.getRecordFile(RecordFileInstance.getHash(recordFile))?.let { recordFile ->
-            val newFile = recordFile.copy(state = recordFile.state.copy(isLocked = true))
+    override fun lockFile(recordFile: RecordFile){
 
-        }
     }
 
-    override fun unlockFile(recordFile: RecordFile) : Unit = fileControl{
+    override fun unlockFile(recordFile: RecordFile){
 
-        it.updateFile(RecordFileInstance.getHash(recordFile), newFile)
     }
 
     override fun forceClone() {
@@ -104,25 +110,15 @@ class FileManager internal constructor(injector: FileManagerInjector): IFileMana
         mState = newState
     }
 
-    private inline fun <T> fileControl(mainFunc : (pool : IFilePool)->T) : T{
-        if(mState == FileManagerState.None)
-            throw StateAssertionException(mState, FileManagerState.None, isNot = true)
-
-        val pool = mInjector.pool
-
-        return mainFunc(pool)
-    }
-
     /**
      * When provider create a file
      */
     private fun onFileCreated(file : File){
         val recordFile = mInjector.parser.parse(file)
 
-        if(recordFile.recordFileType == RecordFileTypeDef.Event)
+        if(recordFile.info is EventInfo)
             return
 
-        mCurrentRecordFile[recordFile.camLocation] = recordFile
     }
 
     /**
@@ -131,18 +127,7 @@ class FileManager internal constructor(injector: FileManagerInjector): IFileMana
     private fun onFileClosed(file : File){
         val recordFile = mInjector.parser.parse(file)
 
-        if(recordFile.recordFileType == RecordFileTypeDef.Event){
-            mInjector.eventHandler.run {
-                // Find last record file in pool
-                val lastRecordFile : RecordFileInstance? = mInjector.pool.getRecordsByLocation(recordFile.camLocation).lastOrNull()
-                process(recordFile, mCurrentRecordFile[recordFile.camLocation], lastRecordFile)
-            }
-            return
-        }
 
-        mCurrentRecordFile[recordFile.camLocation] = null
-
-        mInjector.processor.clone(recordFile)
 
         recordUpdateListener?.onUpdate()
     }

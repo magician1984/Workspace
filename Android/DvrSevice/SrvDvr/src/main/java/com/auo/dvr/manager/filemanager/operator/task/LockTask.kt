@@ -1,30 +1,51 @@
 package com.auo.dvr.manager.filemanager.operator.task
 
 import com.auo.dvr.RecordFileInstance
-import com.auo.dvr.manager.filemanager.operator.FileOperator
+import com.auo.dvr.manager.filemanager.operator.IOperatorTask
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
 
-internal class LockTask(recordFile: RecordFileInstance,private val timeout: Long) : FileOperator.IOperatorTask(recordFile.id) {
-    private val mLocker : Lock = ReentrantLock()
-    private val mCondition = mLocker.newCondition()
+internal class LockTask(recordFile: RecordFileInstance,private val timeout: Long) : IOperatorTask(recordFile, Method.Lock) {
+
+    private val processLock : ReentrantLock = ReentrantLock()
+
+    private val startSignal : Condition = processLock.newCondition()
+
+    private val unlockSignal : Condition = processLock.newCondition()
 
     override fun process() {
-        mLocker.lock()
-        try{
-            mCondition.await(timeout, TimeUnit.MILLISECONDS)
-        }finally {
-            mLocker.unlock()
-        }
+        processLock.lock()
+
+        startSignal.signal()
+
+        unlockSignal.await(timeout, TimeUnit.MILLISECONDS)
+
+        processLock.unlock()
+    }
+
+    override fun postProcess() {
+
+    }
+
+    override fun combine(task: IOperatorTask): Boolean {
+        return false
+    }
+
+    fun waitForStart(){
+        processLock.lock()
+
+        startSignal.await()
+
+        processLock.unlock()
     }
 
     fun unlock(){
-        mLocker.lock()
-        try{
-            mCondition.signal()
-        }finally {
-            mLocker.unlock()
-        }
+        processLock.lock()
+
+        unlockSignal.signal()
+
+        processLock.unlock()
     }
+
 }

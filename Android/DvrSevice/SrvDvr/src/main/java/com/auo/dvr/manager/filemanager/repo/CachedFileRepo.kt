@@ -2,70 +2,66 @@ package com.auo.dvr.manager.filemanager.repo
 
 import com.auo.dvr.RecordFileInstance
 import com.auo.dvr.manager.filemanager.IRepo
+import java.io.File
 
-internal abstract class CachedFileRepo : IRepo {
-    internal data class CacheConfig(val maxCacheSize : Int)
+internal class CachedFileRepo(private val config: CacheConfig, fileOperator: IRepo.IFileOperator, root: File) :
+    IRepo(fileOperator, root) {
+    internal data class CacheConfig(val maxCacheSize: Int, val enable: Boolean)
 
-    internal fun interface OnCacheFullListener{
-        fun onCacheFull(file : List<RecordFileInstance>)
+    private val _files: MutableList<RecordFileInstance> = mutableListOf()
+
+    private var mRepo: IRepo? = null
+
+    override val files: List<RecordFileInstance>
+        get() = (_files + (mRepo?.files ?: mutableListOf())).sortedByDescending { it.createTime }
+
+    override fun add(file: RecordFileInstance): Boolean = checkEnable(onEnable = {
+        TODO("Not yet implemented")
+    }, onDisable = { return@checkEnable mRepo?.add(file) ?: false })
+
+
+    override fun remove(id: Int): Boolean = checkEnable(onEnable = {
+        TODO("Not yet implemented")
+    }, onDisable = { return@checkEnable mRepo?.remove(id) ?: false })
+
+    override fun get(id: Int): RecordFileInstance? = checkEnable(onEnable = {
+        TODO("Not yet implemented")
+    }, onDisable = { return@checkEnable mRepo?.get(id) })
+
+
+    override fun update(id: Int, newFile: RecordFileInstance): Boolean = checkEnable(onDisable = {
+        TODO("Not yet implemented")
+    }, onEnable = { return@checkEnable mRepo?.update(id, newFile) ?: false })
+
+    override fun pop(file: RecordFileInstance): RecordFileInstance? = checkEnable(onEnable = {
+        TODO("Not yet implemented")
+    }, onDisable = {return@checkEnable mRepo?.pop(file)})
+
+    override fun filter(predicate: (RecordFileInstance) -> Boolean): List<RecordFileInstance> {
+        return _files.filter(predicate) + (mRepo?.filter(predicate) ?: mutableListOf())
     }
 
-    protected var mListener : OnCacheFullListener? = null
+    override fun lock(file: RecordFileInstance): Boolean = checkEnable(onEnable = {
+        TODO("Not yet implemented")
+    }, onDisable = { return@checkEnable mRepo?.lock(file) ?: false})
 
-    fun setOnCacheFullListener(listener : OnCacheFullListener?){
-        mListener = listener
+    override fun unlock(file: RecordFileInstance): Boolean = checkEnable(onEnable = {
+        TODO()
+    }, onDisable = { return@checkEnable mRepo?.unlock(file) ?: false})
+
+    override fun link(repo: IRepo) {
+        mRepo = repo
     }
 
-    companion object{
-        fun enable(config : CacheConfig) : CachedFileRepo = object : CachedFileRepo(){
-            private val mConfig : CacheConfig = config
+    override fun clean() {
+        _files.clear()
+        mRepo?.clean()
+    }
 
-            override val files: List<RecordFileInstance>
-                get() = TODO("Not yet implemented")
-
-            override fun add(file: RecordFileInstance): Boolean {
-                TODO("Not yet implemented")
-            }
-
-            override fun remove(id: Int): Boolean {
-                TODO("Not yet implemented")
-            }
-
-            override fun get(id: Int): RecordFileInstance? {
-                TODO("Not yet implemented")
-            }
-
-            override fun update(id: Int, newFile: RecordFileInstance): Boolean {
-                TODO("Not yet implemented")
-            }
-
-            override fun pop(file: RecordFileInstance): RecordFileInstance? {
-                TODO("Not yet implemented")
-            }
-
-            override fun filter(predicate: (RecordFileInstance) -> Boolean): List<RecordFileInstance> {
-                TODO("Not yet implemented")
-            }
-        }
-
-        fun disable() : CachedFileRepo = object : CachedFileRepo(){
-            override val files: List<RecordFileInstance>
-                get() = emptyList()
-
-            override fun add(file: RecordFileInstance): Boolean = false.also {
-                mListener?.onCacheFull(listOf(file))
-            }
-
-            override fun remove(id: Int): Boolean = false
-
-            override fun get(id: Int): RecordFileInstance? = null
-
-            override fun update(id: Int, newFile: RecordFileInstance): Boolean = false
-
-            override fun pop(file: RecordFileInstance): RecordFileInstance? = null
-
-            override fun filter(predicate: (RecordFileInstance) -> Boolean): List<RecordFileInstance> = emptyList()
-
-        }
+    private inline fun <R> checkEnable(onEnable: () -> R, onDisable: () -> R): R {
+        return if (config.enable)
+            onEnable()
+        else
+            onDisable()
     }
 }
