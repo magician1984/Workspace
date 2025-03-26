@@ -1,16 +1,15 @@
 package com.auo.dvr
 
-import com.auo.dvr.manager.IFileManager
 import com.auo.dvr_core.DvrException
 import com.auo.dvr_core.IDvrService
 import com.auo.dvr_core.OnRecordUpdateListener
 import com.auo.dvr_core.RecordFile
 
-class ServiceApiImpl(private val mFileManager: IFileManager) : IDvrService.Stub() {
+class ServiceApiImpl(private val mFileManager: DvrService.IFileManager) : IDvrService.Stub() {
     private val mListeners : MutableList<OnRecordUpdateListener> = mutableListOf()
 
     init {
-        mFileManager.recordUpdateListener = IFileManager.RecordUpdateListener {
+        mFileManager.recordUpdateListener = DvrService.IFileManager.RecordUpdateListener {
             mListeners.forEach {
                 it.onUpdate()
             }

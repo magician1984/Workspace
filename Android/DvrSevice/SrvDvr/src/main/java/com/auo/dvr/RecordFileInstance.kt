@@ -1,10 +1,9 @@
 package com.auo.dvr
 
 import com.auo.dvr_core.CamLocation
-import com.auo.dvr_core.FileType
+import com.auo.dvr_core.RecordType
 import com.auo.dvr_core.RecordFile
 import java.io.File
-import java.nio.file.Files
 
 internal data class RecordFileInstance(private val recordFile: RecordFile, var info: Info) {
     companion object{
@@ -28,7 +27,7 @@ internal data class RecordFileInstance(private val recordFile: RecordFile, var i
 
     val location : CamLocation = recordFile.location
 
-    val fileType : FileType = recordFile.type
+    val type : RecordType = recordFile.type
 
     val createTime : Long = recordFile.createTime
 
@@ -53,6 +52,6 @@ internal data class RecordFileInstance(private val recordFile: RecordFile, var i
     }
 
     override fun toString(): String {
-        return "RecordFileInstance(id='$id', name='$name', location=$location, fileType=$fileType, createTime=$createTime, file=$file)"
+        return "RecordFileInstance(id='$id', name='$name', location=$location, fileType=$type, createTime=$createTime, file=$file)"
     }
 }

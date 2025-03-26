@@ -3,12 +3,12 @@ package com.auo.dvr_core
 import android.os.Parcel
 import android.os.Parcelable
 
-data class RecordFile(val name: String, val createTime: Long, val location: CamLocation,  val type: FileType) : Parcelable{
+data class RecordFile(val name: String, val createTime: Long, val location: CamLocation,  val type: RecordType) : Parcelable{
     constructor(parcel: Parcel) : this(
         parcel.readString().toString(),
         parcel.readLong(),
         CamLocation.fromCode(parcel.readInt()),
-        FileType.fromCode(parcel.readInt())
+        RecordType.fromCode(parcel.readInt())
     )
 
     override fun describeContents(): Int  = 0
