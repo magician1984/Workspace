@@ -1,6 +1,8 @@
 package com.auo.dvr.filemanager
 
 internal data class FileManagerInjector(
-    val parser: IFileParser,
-    val repo : IRepo<*>
+    val parser: FileManager.IFileParser,
+    val repo : FileManager.IRepo,
+    val operator : FileManager.IOperatorMethods,
+    val eventHandler : FileManager.IEventHandler
 )

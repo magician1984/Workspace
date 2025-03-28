@@ -1,66 +1,44 @@
 package com.auo.dvr.filemanager.parser
 
-import com.auo.dvr.RecordFileInstance
-import com.auo.dvr.manager.filemanager.IFileParser
-import com.auo.dvr.manager.filemanager.exception.FileParserException
+import com.auo.dvr.filemanager.RecordFileBundle
+import com.auo.dvr.filemanager.EventInfo
+import com.auo.dvr.filemanager.FileInfo
+import com.auo.dvr.filemanager.FileManager
+import com.auo.dvr.filemanager.FileManagerException
 import com.auo.dvr_core.CamLocation
-import com.auo.dvr_core.RecordType
 import com.auo.dvr_core.RecordFile
+import com.auo.dvr_core.RecordType
 import java.io.File
 
 /**
  * Parser the filename to create RecordFileInstance
- * Filename format: {Location_id}_{CreateTime}_{Duration}.{Extension}
+ * Filename format: {Location_id}_{CreateTime}.{Extension}
  */
-internal class FileParser(
-    targetRoot: HashMap<CamLocation, File>,
-    protectFolderName: String,
-    recordExtension: String,
-    eventExtension: String
-) : IFileParser(targetRoot, protectFolderName, recordExtension, eventExtension) {
-    private enum class Type{
-        Record,
-        Event
+internal class FileParser : FileManager.IFileParser {
+    private data class InfoBundle(val location: CamLocation, val createTime: Long)
+
+    override fun parseEvent(file: File): RecordFileBundle {
+        val (location, createTime) = parseFileName(file.name)
+
+        val recordFile = RecordFile(file.name, createTime, location, RecordType.Unknown)
+
+        return RecordFileBundle(recordFile, EventInfo(createTime, 0))
     }
 
-    override fun parse(sourceFile: File): RecordFileInstance {
-        val info : Triple<CamLocation, Long, Type> = parseInfo(sourceFile.name)
+    override fun parseRecord(file: File): RecordFileBundle {
+        val (location, createTime) = parseFileName(file.name)
 
-        return when(info.third){
-            Type.Record -> parseRecordFile(sourceFile, info.first, info.second)
-            Type.Event -> parseEventFile(sourceFile, info.first, info.second)
-        }
+        val recordFile = RecordFile(file.name.substringAfterLast('_'), createTime, location, RecordType.Normal)
+
+        return RecordFileBundle(recordFile, FileInfo(file))
     }
 
-    override fun reverse(destFile: File): RecordFileInstance {
-        TODO("Not yet implemented")
-    }
-
-    private fun parseRecordFile(sourceFile: File, location: CamLocation, createTime: Long): RecordFileInstance {
-        val name : String =  "$createTime.$recordExtension"
-
-
-
-        return RecordFileInstance(RecordFile(name, createTime, location, RecordType.Normal), info)
-    }
-
-    private fun parseEventFile(sourceFile: File, location: CamLocation, createTime: Long): RecordFileInstance {
-        TODO()
-    }
-
-    private fun parseInfo(filename : String): Triple<CamLocation, Long, Type>{
-        val type : Type = when(filename.substringAfterLast('.')){
-            recordExtension -> Type.Record
-            eventExtension -> Type.Event
-            else -> throw FileParserException(File(filename))
-        }
-
+    private fun parseFileName(filename: String) : InfoBundle{
         val content :List<String> = filename.substringBeforeLast('.').split('_')
-
         val locationDef : CamLocation = CamLocation.entries.find { it.code == content[0].toIntOrNull() } ?: throw FileParserException(File(filename))
-
         val createTime : Long = content[1].toLongOrNull() ?: throw FileParserException(File(filename))
-
-        return Triple(locationDef, createTime, type)
+        return InfoBundle(locationDef, createTime)
     }
+
+    private class FileParserException(file : File) : FileManagerException("[Parser] Parse failed(${file.absolutePath})")
 }

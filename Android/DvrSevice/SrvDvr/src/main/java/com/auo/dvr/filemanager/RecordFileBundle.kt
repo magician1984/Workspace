@@ -1,21 +1,21 @@
-package com.auo.dvr
+package com.auo.dvr.filemanager
 
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.RecordType
 import com.auo.dvr_core.RecordFile
 import java.io.File
 
-internal data class RecordFileInstance(private val recordFile: RecordFile, var info: Info) {
+internal data class RecordFileBundle(val recordFile: RecordFile, var info: Info) {
     companion object{
-        fun toRecordFileList(recordFileInstances: List<RecordFileInstance>) : List<RecordFile> = recordFileInstances.map { it.recordFile }
-        fun toRecordFile(recordFileInstance: RecordFileInstance) : RecordFile = recordFileInstance.recordFile
+        fun toRecordFileList(recordFileBundles: List<RecordFileBundle>) : List<RecordFile> = recordFileBundles.map { it.recordFile }
+        fun toRecordFile(recordFileBundle: RecordFileBundle) : RecordFile = recordFileBundle.recordFile
     }
 
     interface Info{
         val file : File?
 
         companion object{
-            fun empty() : Info = object : Info{
+            fun empty() : Info = object : Info {
                 override val file: File? = null
             }
         }
@@ -38,7 +38,7 @@ internal data class RecordFileInstance(private val recordFile: RecordFile, var i
         if(this === other)
             return true
 
-        if(other is RecordFileInstance)
+        if(other is RecordFileBundle)
             return hashCode() == other.hashCode()
 
         if(other is RecordFile)

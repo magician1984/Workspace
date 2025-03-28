@@ -24,11 +24,7 @@ class ServiceApiImpl(private val mFileManager: DvrService.IFileManager) : IDvrSe
 
     override fun deleteFile(recordFile: RecordFile) : Unit = mFileManager.deleteFile(recordFile)
 
-    override fun holdFile(recordFile: RecordFile) : Unit = mFileManager.holdFile(recordFile)
-
-    override fun releaseFile(recordFile: RecordFile) : Unit = mFileManager.releaseFile(recordFile)
-
-    override fun getRecodFilePath(recordFile: RecordFile): String  = mFileManager.getFilePath(recordFile)
+    override fun copyFile(recordFile: RecordFile, destPath: String) = mFileManager.copyFile(recordFile, destPath)
 
     override fun registerListener(listener: OnRecordUpdateListener) : Unit = if(!mListeners.add(listener)) throw DvrException("DvrService", "Listener already registered") else Unit
 

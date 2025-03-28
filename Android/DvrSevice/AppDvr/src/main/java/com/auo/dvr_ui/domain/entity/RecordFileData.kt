@@ -1,13 +1,13 @@
 package com.auo.dvr_ui.domain.entity
 
-import com.auo.dvr_core.CamLocationDef
+import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.RecordFile
-import com.auo.dvr_core.RecordFileTypeDef
+import com.auo.dvr_core.RecordType
 
-data class RecordFileData constructor(private val recordFile: RecordFile) {
-    val name : String = recordFile.name
-    val location : CamLocationDef = CamLocationDef.entries.find { it.value == recordFile.location } ?: CamLocationDef.Unknown
-    val createTime : Long = recordFile.createTime
-    val type : RecordFileTypeDef = RecordFileTypeDef.entries.find { it.value == recordFile.type } ?: RecordFileTypeDef.Normal
-    val isCloned : Boolean = recordFile.isCloned
+data class RecordFileData(val dto: RecordFile) {
+    val id : Int = dto.hashCode()
+    val name : String = dto.name
+    val location : CamLocation = dto.location
+    val type : RecordType = dto.type
+    val createTime : Long = dto.createTime
 }

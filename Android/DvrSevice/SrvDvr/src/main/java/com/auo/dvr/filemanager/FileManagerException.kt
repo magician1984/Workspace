@@ -1,10 +1,11 @@
 package com.auo.dvr.filemanager
 
 import com.auo.dvr_core.DvrException
-import java.io.File
 
 abstract class FileManagerException(message : String) : DvrException("FileManager", message)
 
-class FileNotExistException(path : String) : FileManagerException("File not exist: $path")
+internal class FileManagerApiException(functionName:String, message : String) : FileManagerException("$functionName: $message")
 
-class EventFileException(val file : File) : FileManagerException("Get event file: ${file.name}")
+internal class FileManagerStateFlowException(currentState: FileManagerState, newState : FileManagerState) : FileManagerException("Wrong state flow: ${currentState.name} -> ${newState.name}")
+
+internal class FileManagerStateException(state : FileManagerState, message: String) : FileManagerException("${state.name}: $message")

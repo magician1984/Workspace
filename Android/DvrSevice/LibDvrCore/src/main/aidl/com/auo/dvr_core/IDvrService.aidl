@@ -13,9 +13,7 @@ interface IDvrService {
 
     void deleteFile(in RecordFile recordFile);
 
-    void holdFile(in RecordFile recordFile);
-    String getRecodFilePath(in RecordFile recordFile);
-    void releaseFile(in RecordFile recordFile);
+    void copyFile(in RecordFile recordFile, in String destPath);
 
     void registerListener(in OnRecordUpdateListener listener);
     void unregisterListener(in OnRecordUpdateListener listener);

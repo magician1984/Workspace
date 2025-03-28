@@ -1,43 +1,80 @@
 package com.auo.dvr.filemanager
 
 import com.auo.dvr.DvrService
-import com.auo.dvr.RecordFileInstance
-import com.auo.dvr.filemanager.exception.FileOperatorException
-import com.auo.dvr.filemanager.exception.StateFlowException
 import com.auo.dvr_core.CamLocation
-import com.auo.dvr_core.DvrException
 import com.auo.dvr_core.RecordFile
 import java.io.File
 import java.util.EnumMap
+import java.util.concurrent.locks.ReentrantLock
 
-class FileManager internal constructor(private val injector: FileManagerInjector):
+internal class FileManager internal constructor(private val injector: FileManagerInjector) :
     DvrService.IFileManager {
+
+    internal interface IFileParser {
+        fun parseEvent(file: File): RecordFileBundle
+        fun parseRecord(file: File): RecordFileBundle
+    }
+
+    internal interface IEventHandler {
+        fun handleEvent(event: RecordFileBundle, records: List<RecordFileBundle>): RecordFileBundle
+    }
+
+    interface IOperatorMethods {
+        fun copy(src: File, dst: File)
+        fun move(src: File, dst: File, isSamePartition: Boolean)
+        fun delete(file: File)
+    }
+
+    internal interface IRepo {
+        val files: List<RecordFileBundle>
+        val root: File
+
+        fun init()
+        fun release() {}
+        fun clean()
+        fun filter(predicate: (RecordFileBundle) -> Boolean): List<RecordFileBundle> = files.filter(predicate)
+        fun add(file: RecordFileBundle): FileInfo
+        fun remove(id: Int): FileInfo
+        fun get(id: Int): RecordFileBundle
+        fun lock(file: RecordFileBundle): FileInfo
+        fun unlock(file: RecordFileBundle): FileInfo
+    }
+
+    internal interface ICache : IRepo{
+        fun interface OnCacheFilesOutListener{
+            fun onOut(files: List<RecordFileBundle>)
+        }
+    }
 
     override var recordUpdateListener: DvrService.IFileManager.RecordUpdateListener? = null
 
     override val recordFiles: List<RecordFile>
-        get() = mRepo.files.map { RecordFileInstance.toRecordFile(it) }
+        get() = mRepo.files.map { RecordFileBundle.toRecordFile(it) }
 
-    private var mState : FileManagerState =
+    private var mState: FileManagerState =
         FileManagerState.None
 
-    private val mRepo : IRepo<*>
+    private val mRepo: IRepo
         get() = injector.repo
 
-    private val mParser : IFileParser
+    private val mParser: IFileParser
         get() = injector.parser
 
-    private var mHoldingRecord : RecordFileInstance? = null
+    private var mHoldingRecord: RecordFileBundle? = null
 
+    private val lock: ReentrantLock = ReentrantLock()
 
-    private val mCurrentRecordFile : EnumMap<CamLocation, RecordFileInstance?> = EnumMap<CamLocation, RecordFileInstance?>(
-        CamLocation::class.java).apply {
-        CamLocation.entries.forEach { put(it, null) }
-    }
+    private val completeCondition = lock.newCondition()
 
-    @Throws(DvrException::class)
+    private val mCurrentRecordFile: EnumMap<CamLocation, RecordFileBundle?> =
+        EnumMap<CamLocation, RecordFileBundle?>(
+            CamLocation::class.java
+        ).apply {
+            CamLocation.entries.forEach { put(it, null) }
+        }
+
     override fun init() {
-        stateFlow(expectState = FileManagerState.None, newState = FileManagerState.Ready){
+        stateFlow(expectState = FileManagerState.None, newState = FileManagerState.Ready) {
             mRepo.init()
         }
     }
@@ -45,80 +82,104 @@ class FileManager internal constructor(private val injector: FileManagerInjector
     override fun release() {
         stateFlow(expectState = FileManagerState.Ready, newState = FileManagerState.None) {
             mRepo.clean()
+            mRepo.release()
         }
     }
 
-    override fun holdFile(recordFile: RecordFile) {
-        val recordFileInstance = findFileOrThrow(recordFile)
+    override fun copyFile(recordFile: RecordFile, destPath: String) {
+        val recordFileBundle = findFileOrThrow(recordFile)
 
-        if(mHoldingRecord != null && mHoldingRecord?.id != recordFileInstance.id)
-            throw FileOperatorException("Hold", "Another file is holding")
+        if (recordFileBundle != mHoldingRecord)
+            throw FileManagerApiException("Copy", "File is holding by another thread")
 
-        if(mHoldingRecord?.id == recordFileInstance.id)
-            return
+        lock.lock()
 
-        if(!mRepo.hold(recordFileInstance))
-            throw FileOperatorException("Hold", "Failed to hold file")
+        try{
+            mHoldingRecord = recordFileBundle
 
-        mHoldingRecord = recordFileInstance
+            injector.operator.copy(mHoldingRecord!!.file!!, File(destPath))
+
+            completeCondition.signal()
+        }finally {
+            mHoldingRecord = null
+            lock.unlock()
+        }
+
     }
 
-    override fun releaseFile(recordFile: RecordFile) {
-        val recordFileInstance = findFileOrThrow(recordFile)
-
-        if(mHoldingRecord == null || mHoldingRecord?.id != recordFileInstance.id)
-            throw FileOperatorException("Release", "File is not holding")
-
-        if(!mRepo.unhold(recordFileInstance))
-            throw FileOperatorException("Release", "Failed to release file")
-
-        mHoldingRecord = null
+    override fun deleteFile(recordFile: RecordFile) = tryWaitForCopy(recordFile){
+        val fileInfo : FileInfo = mRepo.remove(it.id)
+        injector.operator.delete(fileInfo.file)
     }
 
-    override fun getFilePath(recordFile: RecordFile): String = findFileOrThrow(recordFile).file?.absolutePath ?: throw FileOperatorException("GetFilePath", "File not found")
-
-    override fun deleteFile(recordFile: RecordFile){
-        val recordFileInstance = findFileOrThrow(recordFile)
-
-        if(!mRepo.remove(recordFileInstance.id))
-            throw FileOperatorException("Delete", "Failed to delete file")
+    override fun lockFile(recordFile: RecordFile) = tryWaitForCopy(recordFile){
+        val fileInfo : FileInfo = mRepo.lock(it)
+        injector.operator.move(it.file!!, fileInfo.file, true)
     }
 
-    override fun lockFile(recordFile: RecordFile){
-        val recordFileInstance = findFileOrThrow(recordFile)
-
-        if(!mRepo.lock(recordFileInstance))
-            throw FileOperatorException("Lock", "Failed to lock file")
-    }
-
-    override fun unlockFile(recordFile: RecordFile){
-        val recordFileInstance = findFileOrThrow(recordFile)
-
-        if(!mRepo.unlock(recordFileInstance))
-            throw FileOperatorException("Unlock", "Failed to unlock file")
+    override fun unlockFile(recordFile: RecordFile) = tryWaitForCopy(recordFile){
+        val fileInfo : FileInfo = mRepo.unlock(it)
+        injector.operator.move(it.file!!, fileInfo.file, true)
     }
 
     override fun forceClone() {
         //TODO("Not yet implemented")
     }
 
-    override fun onFileClosed(type: DvrService.IDvrLauncher.FileType, file: File) {
-        TODO("Not yet implemented")
+    override fun onFileUpdate(
+        eventType: DvrService.IDvrLauncher.EventType,
+        type: DvrService.IDvrLauncher.FileType,
+        file: File
+    ) {
+        if (eventType == DvrService.IDvrLauncher.EventType.Close) {
+             when (type) {
+                DvrService.IDvrLauncher.FileType.Event -> {
+                    mParser.parseEvent(file).run {
+                        TODO("Handle event file")
+                    }
+                }
+
+                DvrService.IDvrLauncher.FileType.Record -> {
+                    val recordFileBundle: RecordFileBundle = mParser.parseRecord(file)
+                    mRepo.add(recordFileBundle)
+                }
+            }
+        }else{
+            if(type == DvrService.IDvrLauncher.FileType.Record){
+                val recordFileBundle: RecordFileBundle = mParser.parseRecord(file)
+                mCurrentRecordFile[recordFileBundle.location] = recordFileBundle
+            }
+        }
     }
 
-    override fun onFileCreated(type: DvrService.IDvrLauncher.FileType, file: File) {
-        TODO("Not yet implemented")
-    }
-
-
-    private inline fun stateFlow(expectState : FileManagerState, newState: FileManagerState, mainFunc : ()->Unit){
-        if(mState != expectState)
-            throw StateFlowException(mState, newState)
+    private inline fun stateFlow(
+        expectState: FileManagerState,
+        newState: FileManagerState,
+        mainFunc: () -> Unit
+    ) {
+        if (mState != expectState)
+            throw FileManagerStateFlowException(mState, newState)
 
         mainFunc()
 
         mState = newState
     }
 
-    private fun findFileOrThrow(file : RecordFile) : RecordFileInstance = mRepo.get(file.hashCode()) ?: throw FileNotExistException(file.name)
+    private fun findFileOrThrow(file: RecordFile): RecordFileBundle = mRepo.get(file.hashCode())
+
+    private inline fun tryWaitForCopy(recordFile: RecordFile, block: (RecordFileBundle) -> Unit) {
+        val recordFileBundle = findFileOrThrow(recordFile)
+
+        if (recordFileBundle == mHoldingRecord){
+            try{
+                lock.lock()
+
+                completeCondition.await()
+            }finally {
+                lock.unlock()
+            }
+        }
+
+        block(recordFileBundle)
+    }
 }
