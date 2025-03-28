@@ -1,4 +1,4 @@
-package com.auo.dvr_ui.domain.entity
+package com.auo.dvr_ui.entity
 
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.RecordFile
