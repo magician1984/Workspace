@@ -8,6 +8,7 @@ interface IDataSource {
         fun onUpdate(records : List<RecordFileData>)
     }
 
+    fun getAllRecords() : List<RecordFileData>
     fun registerUpdateListener(listener: EventListener)
     fun lockRecord(record: RecordFileData)
     fun unlockRecord(record: RecordFileData)

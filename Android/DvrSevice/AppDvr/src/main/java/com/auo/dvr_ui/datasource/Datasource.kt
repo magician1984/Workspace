@@ -12,10 +12,14 @@ class Datasource(private val service : IDvrService,private val cacheFolder : Fil
     init {
         service.registerListener(object : OnRecordUpdateListener.Stub() {
             override fun onUpdate() {
-                val records = service.recordFiles.map { RecordFileData(it) }
+                val records = getAllRecords()
                 mListeners.forEach { it.onUpdate(records) }
             }
         })
+    }
+
+    override fun getAllRecords(): List<RecordFileData> {
+        return service.recordFiles.map { RecordFileData(it) }
     }
 
     override fun registerUpdateListener(listener: IDataSource.EventListener) {

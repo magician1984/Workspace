@@ -2,6 +2,10 @@ package com.auo.dvr_ui.entity
 
 import java.io.File
 
+interface IUseCaseGetListFiles{
+    operator fun invoke() : List<RecordFileData>
+}
+
 interface IUseCaseRegisterListener{
     operator fun invoke(callback : (List<RecordFileData>) -> Unit)
 }
@@ -21,3 +25,4 @@ interface IUseCaseDeleteFile{
 interface IUseCaseGetCacheFile{
     operator fun invoke(record : RecordFileData) : File
 }
+
