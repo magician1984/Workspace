@@ -8,7 +8,9 @@ import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.RecordType
 import java.io.File
 
-internal class BufferedRepo(override val root: File) : FileManager.IRepo {
+internal class BufferedRepo(override val root: File,
+                            override val operator: FileManager.IOperatorMethods
+) : FileManager.IRepo {
     companion object {
         private const val LOCK_FOLDER_NAME = "Locked"
         private const val PROTECTED_FOLDER_NAME = "Protected"
@@ -43,7 +45,7 @@ internal class BufferedRepo(override val root: File) : FileManager.IRepo {
         _files.clear()
     }
 
-    override fun add(file: RecordFileBundle): FileInfo {
+    override fun add(file: RecordFileBundle) {
         if(_files.any { it.id == file.hashCode() })
             throw BufferRepoException("Add", "File already exists: ${file.name}")
 
@@ -57,24 +59,25 @@ internal class BufferedRepo(override val root: File) : FileManager.IRepo {
             }
         }
 
-        _files.add(file.copy(info = fileInfo))
+        operator.move(file.file!!, fileInfo.file, false)
 
-        return fileInfo
+        _files.add(file.copy(info = fileInfo))
     }
 
-    override fun remove(id: Int): FileInfo {
+    override fun remove(id: Int) {
         val file : RecordFileBundle = _files.find { it.id == id } ?: throw BufferRepoException("Remove", "File not found: $id")
+
+        operator.delete(file.file!!)
 
         _files.remove(file)
 
-        return file.info as FileInfo
     }
 
     override fun get(id: Int): RecordFileBundle {
         return _files.find { it.id == id } ?: throw BufferRepoException("Get", "File not found: $id")
     }
 
-    override fun lock(file: RecordFileBundle): FileInfo {
+    override fun lock(file: RecordFileBundle) {
         val index  = _files.indexOfFirst { it.id == file.hashCode() }
 
         if(index == -1)
@@ -85,14 +88,18 @@ internal class BufferedRepo(override val root: File) : FileManager.IRepo {
         if(recordFile.type == RecordType.Locked)
             throw BufferRepoException("Lock", "File already locked: ${file.name}")
 
-        return withLockFolder(file.location){
-            val fileInfo = FileInfo(File(it, file.name))
-            _files[index] = recordFile.copy(info = fileInfo)
-            fileInfo
+        val fileInfo = withLockFolder(file.location){
+           FileInfo(File(it, file.name))
         }
+
+        operator.move(recordFile.file!!, fileInfo.file, true)
+
+        recordFile.recordFile = recordFile.recordFile.copy(type = RecordType.Locked)
+
+        recordFile.info = fileInfo
     }
 
-    override fun unlock(file: RecordFileBundle): FileInfo{
+    override fun unlock(file: RecordFileBundle){
         val index = _files.indexOfFirst { it.id == file.hashCode() }
 
         if(index == -1)
@@ -103,11 +110,15 @@ internal class BufferedRepo(override val root: File) : FileManager.IRepo {
         if(recordFile.type != RecordType.Locked)
             throw BufferRepoException("Unlock", "File not locked: ${file.name}")
 
-        return withCameraFolder(file.location){
-            val fileInfo = FileInfo(File(it, file.name))
-            _files[index] = file.copy(info = fileInfo)
-            fileInfo
+        val fileInfo = withCameraFolder(file.location){
+            FileInfo(File(it, file.name))
         }
+
+        operator.move(recordFile.file!!, fileInfo.file, true)
+
+        recordFile.recordFile = recordFile.recordFile.copy(type = RecordType.Normal)
+
+        recordFile.info = fileInfo
     }
 
     private inline fun <R> withCameraFolder(camLocation: CamLocation, func: (File) -> R): R {

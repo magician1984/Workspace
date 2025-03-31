@@ -4,7 +4,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
-import android.os.Build
 import android.os.Environment
 import android.os.IBinder
 import android.util.Log
@@ -57,7 +56,7 @@ class DvrService : Service() {
         fun init()
         fun release()
 
-        // Hold to frozen the file operation until release
+        // Blocking call
         fun copyFile(recordFile: RecordFile, destPath: String)
 
         fun deleteFile(recordFile: RecordFile)
@@ -77,13 +76,18 @@ class DvrService : Service() {
     override fun onCreate() {
         try{
             //Workaround: Shared partition folder is not ready yet, use Downloads folder instead
-            val sourceFolder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Dvr_src")
+            val sourceFolder = File(getExternalFilesDir(null), "Dvr_src")
+
+            if(!sourceFolder.exists())
+                sourceFolder.mkdirs()
 
             mDvrLauncher = DvrLauncher(sourceFolder)
 
             mFileManager = FileManagerBuilder()
                 .setTargetRoot(mDvrLauncher.configureFile.destinationFolder)
                 .build()
+
+            mDvrLauncher.onRecordFileUpdateListener = mFileManager
 
             mServiceApi = ServiceApiImpl(mFileManager)
 

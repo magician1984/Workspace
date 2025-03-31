@@ -3,11 +3,12 @@ package com.auo.dvr.launcher
 import android.os.Environment
 import android.os.FileObserver
 import android.util.Log
+import com.arthenica.ffmpegkit.FFmpegKit
 import com.auo.dvr.DvrConfigure
 import com.auo.dvr.DvrService
 import java.io.File
 
-internal class DvrLauncher(sharedPartitionFolder: File) : DvrService.IDvrLauncher {
+internal class DvrLauncher(private val sharedPartitionFolder: File) : DvrService.IDvrLauncher {
     companion object {
         private const val EVENT_FILE_EXTENSION = "evt"
         private const val WORKAROUND_FILE_EXTENSION = "h265"
@@ -17,10 +18,12 @@ internal class DvrLauncher(sharedPartitionFolder: File) : DvrService.IDvrLaunche
     override val configureFile: DvrConfigure
         get() = DvrConfigure(
             File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                sharedPartitionFolder.parentFile,
                 "Dvr_dst"
             )
         )
+
+    private val workaround : Workaround = Workaround()
 
     init {
         Log.d("DvrLauncher", "sharedPartitionFolder: ${sharedPartitionFolder.absolutePath}, target folder: ${configureFile.destinationFolder.absolutePath}")
@@ -40,7 +43,7 @@ internal class DvrLauncher(sharedPartitionFolder: File) : DvrService.IDvrLaunche
                 when (path.substringAfterLast('.')){
                     EVENT_FILE_EXTENSION-> onRecordFileUpdateListener?.onFileUpdate(eventType, DvrService.IDvrLauncher.FileType.Event, File(sharedPartitionFolder, path))
                     RECORD_FILE_EXTENSION-> onRecordFileUpdateListener?.onFileUpdate(eventType, DvrService.IDvrLauncher.FileType.Record, File(sharedPartitionFolder, path))
-                    WORKAROUND_FILE_EXTENSION-> workaround(File(sharedPartitionFolder, path))
+                    WORKAROUND_FILE_EXTENSION-> workaround(eventType, File(sharedPartitionFolder, path))
                 }
             }
         }
@@ -55,11 +58,9 @@ internal class DvrLauncher(sharedPartitionFolder: File) : DvrService.IDvrLaunche
     }
 
     // Workaround: Provider can not generate mp4 file, so we need to convert h265 to mp4
-    private fun workaround(file: File){
-//        val ffmpeg = FFmpeg()
-//        ffmpeg.execute("-i ${file.absolutePath} -c:v copy -c:a copy ${file.absolutePath.replace(WORKAROUND_FILE_EXTENSION, RECORD_FILE_EXTENSION)}")
-        val targetFile = File(file.parentFile, file.name.replace(WORKAROUND_FILE_EXTENSION, RECORD_FILE_EXTENSION))
-        file.copyTo(targetFile)
-        file.delete()
+    private fun workaround(eventType: DvrService.IDvrLauncher.EventType,  file: File){
+        if(eventType != DvrService.IDvrLauncher.EventType.Create)
+            return
+        workaround.process(file)
     }
 }

@@ -17,7 +17,9 @@ class FileManagerBuilder : DvrService.IFileManager.Builder {
     override fun build(): DvrService.IFileManager {
         // Check and Create target root
 
-        val injector = FileManagerInjector(FileParser(), BufferedRepo(targetRoot), OperatorMethods(), EventHandler())
+        val operatorMethods = OperatorMethods()
+
+        val injector = FileManagerInjector(FileParser(), BufferedRepo(targetRoot, operatorMethods), operatorMethods, EventHandler())
 
         return FileManager(injector)
     }

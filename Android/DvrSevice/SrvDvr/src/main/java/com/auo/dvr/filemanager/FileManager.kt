@@ -1,5 +1,6 @@
 package com.auo.dvr.filemanager
 
+import android.util.Log
 import com.auo.dvr.DvrService
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.RecordFile
@@ -28,16 +29,17 @@ internal class FileManager internal constructor(private val injector: FileManage
     internal interface IRepo {
         val files: List<RecordFileBundle>
         val root: File
+        val operator : IOperatorMethods
 
         fun init()
         fun release() {}
         fun clean()
         fun filter(predicate: (RecordFileBundle) -> Boolean): List<RecordFileBundle> = files.filter(predicate)
-        fun add(file: RecordFileBundle): FileInfo
-        fun remove(id: Int): FileInfo
+        fun add(file: RecordFileBundle)
+        fun remove(id: Int)
         fun get(id: Int): RecordFileBundle
-        fun lock(file: RecordFileBundle): FileInfo
-        fun unlock(file: RecordFileBundle): FileInfo
+        fun lock(file: RecordFileBundle)
+        fun unlock(file: RecordFileBundle)
     }
 
     internal interface ICache : IRepo{
@@ -108,18 +110,15 @@ internal class FileManager internal constructor(private val injector: FileManage
     }
 
     override fun deleteFile(recordFile: RecordFile) = tryWaitForCopy(recordFile){
-        val fileInfo : FileInfo = mRepo.remove(it.id)
-        injector.operator.delete(fileInfo.file)
+        mRepo.remove(it.id)
     }
 
     override fun lockFile(recordFile: RecordFile) = tryWaitForCopy(recordFile){
-        val fileInfo : FileInfo = mRepo.lock(it)
-        injector.operator.move(it.file!!, fileInfo.file, true)
+        mRepo.lock(it)
     }
 
     override fun unlockFile(recordFile: RecordFile) = tryWaitForCopy(recordFile){
-        val fileInfo : FileInfo = mRepo.unlock(it)
-        injector.operator.move(it.file!!, fileInfo.file, true)
+        mRepo.unlock(it)
     }
 
     override fun forceClone() {
@@ -131,11 +130,12 @@ internal class FileManager internal constructor(private val injector: FileManage
         type: DvrService.IDvrLauncher.FileType,
         file: File
     ) {
+        Log.d("FileManager", "onFileUpdate: $eventType, $type, ${file.absolutePath}")
         if (eventType == DvrService.IDvrLauncher.EventType.Close) {
              when (type) {
                 DvrService.IDvrLauncher.FileType.Event -> {
                     mParser.parseEvent(file).run {
-                        TODO("Handle event file")
+                        Log.d("FileManager", "Event: $this")
                     }
                 }
 

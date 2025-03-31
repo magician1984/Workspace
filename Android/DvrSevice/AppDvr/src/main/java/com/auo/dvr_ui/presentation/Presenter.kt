@@ -1,5 +1,8 @@
 package com.auo.dvr_ui.presentation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.ui.Modifier
@@ -38,11 +41,17 @@ class Presenter(
 
     override fun onLoading() {
         renderer {
-            
+
         }
     }
 
     private fun renderer(content: @Composable () -> Unit){
-        composeRendererFunction(null, content)
+        composeRendererFunction(null){
+            Scaffold {
+                Box(modifier = Modifier.padding(it)) {
+                    content()
+                }
+            }
+        }
     }
 }

@@ -1,5 +1,6 @@
 package com.auo.dvr.filemanager.parser
 
+import android.util.Log
 import com.auo.dvr.filemanager.RecordFileBundle
 import com.auo.dvr.filemanager.EventInfo
 import com.auo.dvr.filemanager.FileInfo
@@ -26,10 +27,13 @@ internal class FileParser : FileManager.IFileParser {
     }
 
     override fun parseRecord(file: File): RecordFileBundle {
+        Log.d("FileParser", "parseRecord: ${file.absolutePath}")
+
         val (location, createTime) = parseFileName(file.name)
 
         val recordFile = RecordFile(file.name.substringAfterLast('_'), createTime, location, RecordType.Normal)
 
+        Log.d("FileParser", "parseRecord: $recordFile")
         return RecordFileBundle(recordFile, FileInfo(file))
     }
 
