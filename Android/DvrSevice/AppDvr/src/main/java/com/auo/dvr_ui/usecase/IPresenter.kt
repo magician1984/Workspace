@@ -5,16 +5,19 @@ import com.auo.dvr_ui.entity.IUseCaseGetCacheFile
 import com.auo.dvr_ui.entity.IUseCaseGetListFiles
 import com.auo.dvr_ui.entity.IUseCaseLockFile
 import com.auo.dvr_ui.entity.IUseCaseRegisterListener
+import com.auo.dvr_ui.entity.IUseCaseUnlockFile
 
 interface IPresenter {
-    val useCaseGetListFiles : IUseCaseGetListFiles
-    val useCaseRegisterListener : IUseCaseRegisterListener
-    val useCaseLockFile : IUseCaseLockFile
-    val useCaseUnlockFile : IUseCaseLockFile
-    val useCaseDeleteFile : IUseCaseDeleteFile
-    val useCaseGetCacheFile : IUseCaseGetCacheFile
+
+    fun summit(
+        useCaseGetListFiles: IUseCaseGetListFiles,
+        useCaseRegisterListener: IUseCaseRegisterListener,
+        useCaseLockFile: IUseCaseLockFile,
+        useCaseUnlockFile: IUseCaseUnlockFile,
+        useCaseDeleteFile: IUseCaseDeleteFile,
+        useCaseGetCacheFile: IUseCaseGetCacheFile
+    )
 
     fun onReady()
-    fun onError(errMsg: String)
     fun onLoading()
 }

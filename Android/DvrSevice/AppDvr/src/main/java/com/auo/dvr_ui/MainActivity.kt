@@ -1,52 +1,108 @@
 package com.auo.dvr_ui
 
+import android.content.ComponentName
 import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
+import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.annotation.RestrictTo
 import com.auo.dvr.DvrService
-import com.auo.dvr_ui.ui.theme.DvrServiceTheme
+import com.auo.dvr_core.IDvrService
+import com.auo.dvr_ui.datasource.Datasource
+import com.auo.dvr_ui.presentation.Presenter
+import com.auo.dvr_ui.usecase.IDataSource
+import com.auo.dvr_ui.usecase.IPresenter
+import com.auo.dvr_ui.usecase.UseCaseDeleteFile
+import com.auo.dvr_ui.usecase.UseCaseGetCacheFile
+import com.auo.dvr_ui.usecase.UseCaseGetListFiles
+import com.auo.dvr_ui.usecase.UseCaseLockFile
+import com.auo.dvr_ui.usecase.UseCaseRegisterListener
+import com.auo.dvr_ui.usecase.UseCaseUnlockFile
+import com.auo.dvr_ui.utils.MockService
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.locks.Condition
+import java.util.concurrent.locks.ReentrantLock
 
 class MainActivity : ComponentActivity() {
+    private val mLock = ReentrantLock()
+
+    private val serviceReadyCondition: Condition = mLock.newCondition()
+
+    private lateinit var mService: IDvrService
+
+    private lateinit var mPresenter: IPresenter
+
+    private lateinit var mDataSource : IDataSource
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent {
-            DvrServiceTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
-        }
 
+        //Workaround: Service should be start complete at booting time
         startForegroundService(Intent(this, DvrService::class.java))
 
+        initializePresenter()
+
+        initializeService()
+
+        initializeDataSource()
     }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+    private fun initializeService() {
+//        val intent = Intent(this, DvrService::class.java)
+//        bindService(intent, object : ServiceConnection {
+//            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+//                mLock.lock()
+//                try {
+//                    mService = IDvrService.Stub.asInterface(service)
+//                    serviceReadyCondition.signal()
+//                } finally {
+//                    mLock.unlock()
+//                }
+//            }
+//
+//            override fun onServiceDisconnected(name: ComponentName?) {
+//                TODO("Not yet implemented")
+//            }
+//        }, BIND_AUTO_CREATE)
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    DvrServiceTheme {
-        Greeting("Android")
+        mService = MockService()
+    }
+
+    private fun initializePresenter(){
+        mPresenter = Presenter(this)
+
+        mPresenter.onLoading()
+    }
+
+    private fun initializeDataSource(){
+        val initializeThread = Executors.newSingleThreadExecutor()
+
+        initializeThread.submit{
+            if(!::mService.isInitialized){
+                mLock.lock()
+                serviceReadyCondition.await()
+                mLock.unlock()
+            }
+
+            mDataSource = Datasource(mService, cacheDir)
+
+            mPresenter.summit(
+                UseCaseGetListFiles(mDataSource),
+                UseCaseRegisterListener(mDataSource),
+                UseCaseLockFile(mDataSource),
+                UseCaseUnlockFile(mDataSource),
+                UseCaseDeleteFile(mDataSource),
+                UseCaseGetCacheFile(mDataSource)
+            )
+
+            runOnUiThread {
+                mPresenter.onReady()
+            }
+        }
     }
 }
