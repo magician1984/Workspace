@@ -1,5 +1,6 @@
 package com.auo.dvr_ui.presentation.contents
 
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -15,12 +16,11 @@ import com.auo.dvr_ui.R
 import com.auo.dvr_ui.presentation.IUserIntents
 import com.auo.dvr_ui.presentation.Presenter
 
-internal class CameraLocationView : Presenter.IView {
+internal class CameraLocationView(override val onIntent: (IUserIntents) -> Unit) : Presenter.IView {
     @Composable
     override fun Draw(
         modifier: Modifier,
-        state: Presenter.State,
-        onIntent: (IUserIntents) -> Unit
+        state: Presenter.State
     ) {
         val tabItems = remember {
             listOf(
@@ -31,12 +31,17 @@ internal class CameraLocationView : Presenter.IView {
             )
         }
 
-        TabRow(selectedTabIndex = tabItems.indexOfFirst { it.first == state.camLocation }){
+        TabRow(modifier = modifier, selectedTabIndex = tabItems.indexOfFirst { it.first == state.camLocation }){
             tabItems.forEachIndexed { index, pair ->
+                val isSelected = index == tabItems.indexOfFirst { it.first == state.camLocation }
                 Tab(
-                    selected = index == tabItems.indexOfFirst { it.first == state.camLocation },
-                    onClick = { onIntent(IUserIntents.ViewCameraLocation(pair.first)) }) {
-                    Icon(painter = painterResource(id = pair.second), contentDescription = null, modifier = Modifier.size(52.dp).padding(8.dp))
+                    modifier = Modifier.fillMaxHeight(),
+                    selected = isSelected,
+                    onClick = {
+                        if(!isSelected)
+                            onIntent(IUserIntents.ViewCameraLocation(pair.first))
+                    }) {
+                    Icon(painter = painterResource(id = pair.second), contentDescription = null, modifier = Modifier.size(64.dp).padding(bottom = 4.dp, top = 4.dp))
                 }
             }
         }

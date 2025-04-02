@@ -19,7 +19,10 @@ class Datasource(private val service : IDvrService,private val cacheFolder : Fil
     }
 
     override fun getAllRecords(): List<RecordFileData> {
-        return service.recordFiles.map { RecordFileData(it) }
+        return service.recordFiles.map {
+            val cacheFile = File(cacheFolder, "${it.hashCode()}.mp4")
+            RecordFileData(it, if(cacheFile.exists()) cacheFile else null)
+        }
     }
 
     override fun registerUpdateListener(listener: IDataSource.EventListener) {

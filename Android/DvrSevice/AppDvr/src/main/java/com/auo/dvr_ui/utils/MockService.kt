@@ -1,12 +1,14 @@
 package com.auo.dvr_ui.utils
 
+import android.content.Context
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.IDvrService
 import com.auo.dvr_core.OnRecordUpdateListener
 import com.auo.dvr_core.RecordFile
 import com.auo.dvr_core.RecordType
+import java.io.File
 
-class MockService : IDvrService.Stub() {
+class MockService(private val context: Context) : IDvrService.Stub() {
     private val mRecordFiles = mutableListOf<RecordFile>()
 
     private val mListeners = mutableListOf<OnRecordUpdateListener>()
@@ -20,7 +22,7 @@ class MockService : IDvrService.Stub() {
                 "${randomTime}.mp4",
                 randomTime,
                 CamLocation.entries.random(),
-                RecordType.Normal
+                RecordType.entries.random()
             )
             mRecordFiles.add(recordFile)
         }
@@ -51,7 +53,12 @@ class MockService : IDvrService.Stub() {
     }
 
     override fun copyFile(recordFile: RecordFile, destPath: String) {
-
+        context.assets.open("mock_video.mp4")
+            .use { inputStream ->
+                File(destPath).outputStream().use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
     }
 
     override fun registerListener(listener: OnRecordUpdateListener?) {

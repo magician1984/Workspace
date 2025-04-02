@@ -15,6 +15,8 @@ mockito-core = "5.16.0"
 mockito-kotlin = "4.1.0"
 junitJupiter = "5.8.1"
 ffmpegKitFull = "6.0.LTS"
+exoplayerCore = "2.19.1"
+media3Exoplayer = "1.6.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -38,6 +40,8 @@ mockito-core = { module = "org.mockito:mockito-core", version = "5.8.0" }
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version = "4.1.0" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junitJupiter" }
 ffmpeg-kit-full = { group = "com.arthenica", name = "ffmpeg-kit-full", version.ref = "ffmpegKitFull" }
+exoplayer-core = { group = "com.google.android.exoplayer", name = "exoplayer-core", version.ref = "exoplayerCore" }
+androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version = "1.5.1" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

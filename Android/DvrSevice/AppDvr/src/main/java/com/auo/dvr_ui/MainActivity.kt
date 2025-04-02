@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
 //            }
 //        }, BIND_AUTO_CREATE)
 
-        mService = MockService()
+        mService = MockService(this)
     }
 
     private fun initializePresenter(){

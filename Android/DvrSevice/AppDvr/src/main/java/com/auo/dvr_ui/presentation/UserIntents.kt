@@ -12,4 +12,5 @@ sealed class IUserIntents{
     class LockFile(val file : RecordFileData) : IUserIntents()
     class UnlockFile(val file : RecordFileData) : IUserIntents()
     class DeleteFile(val file : RecordFileData) : IUserIntents()
+    data object ReplayFile : IUserIntents()
 }

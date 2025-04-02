@@ -5,12 +5,11 @@ plugins {
 
 android {
     namespace = "com.auo.dvr_ui"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.auo.dvr_ui"
         minSdk = 34
-        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -61,6 +60,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(project(":LibDvrCore"))
     implementation(project(":SrvDvr"))
+    implementation(libs.androidx.media3.exoplayer)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
