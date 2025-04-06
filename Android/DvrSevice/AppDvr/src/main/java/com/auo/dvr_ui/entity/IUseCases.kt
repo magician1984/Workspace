@@ -28,3 +28,11 @@ interface IUseCaseGetCacheFile : IUseCase{
     operator fun invoke(record : RecordFileData) : File
 }
 
+interface IUseCaseGetDvrState : IUseCase{
+    operator fun invoke() : DvrStateData
+}
+
+interface IUseCaseRegisterDvrStateListener : IUseCase{
+    operator fun invoke(callback : (DvrStateData) -> Unit)
+}
+

@@ -4,13 +4,13 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
-import android.os.Environment
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.auo.dvr.filemanager.FileManagerBuilder
 import com.auo.dvr.launcher.DvrLauncher
 import com.auo.dvr_core.DvrException
+import com.auo.dvr_core.DvrState
 import com.auo.dvr_core.IDvrService
 import com.auo.dvr_core.RecordFile
 import java.io.File
@@ -31,13 +31,15 @@ class DvrService : Service() {
             fun onFileUpdate(eventType:EventType, type: FileType, file: File)
         }
 
-        interface OnExternalDeviceStateChangeListener{
-            fun onExternalDeviceStateChange(available: Boolean)
+        interface OnServiceStateUpdateListener{
+            fun onStateUpdate(state: DvrServiceState)
         }
 
-        val configureFile : DvrConfigure
+        val serviceState : DvrServiceState
 
         var onRecordFileUpdateListener : OnRecordFileUpdateListener?
+
+        var onServiceStateUpdateListener : OnServiceStateUpdateListener?
 
         fun start()
 
@@ -69,9 +71,14 @@ class DvrService : Service() {
         fun forceClone()
     }
 
-    private lateinit var mFileManager : IFileManager
+    abstract class IServiceApi : IDvrService.Stub(){
+        abstract var fileManager: IFileManager?
+        abstract fun updateState(state: DvrState)
+    }
 
-    private lateinit var mServiceApi: IDvrService.Stub
+    private var mFileManager : IFileManager? = null
+
+    private lateinit var mServiceApi: IServiceApi
 
     private lateinit var mDvrLauncher : IDvrLauncher
 
@@ -85,17 +92,43 @@ class DvrService : Service() {
             if(!sourceFolder.exists())
                 sourceFolder.mkdirs()
 
-            mDvrLauncher = DvrLauncher(sourceFolder)
+            mDvrLauncher = DvrLauncher(sourceFolder, object : DvrLauncher.IDeviceDetect{
+                override val mountedFolder: File?
+                    get() = getExternalFilesDir(null)
 
-            mFileManager = FileManagerBuilder()
-                .setTargetRoot(mDvrLauncher.configureFile.destinationFolder)
-                .build()
+                override fun onFlashDiskMountStateUpdate(callback: (Boolean) -> Unit) {
+
+                }
+            })
+
+            if(mDvrLauncher.serviceState.available){
+                mFileManager = FileManagerBuilder()
+                    .setTargetRoot(mDvrLauncher.serviceState.destinationFolder!!)
+                    .build()
+
+                mFileManager!!.init()
+            }
 
             mDvrLauncher.onRecordFileUpdateListener = mFileManager
 
-            mServiceApi = ServiceApiImpl(mFileManager)
+            mServiceApi = ServiceApiImpl()
 
-            mFileManager.init()
+            mServiceApi.fileManager = mFileManager
+
+            mDvrLauncher.onServiceStateUpdateListener = object : IDvrLauncher.OnServiceStateUpdateListener{
+                override fun onStateUpdate(state: DvrServiceState) {
+                    if(state.available){
+                        mFileManager = FileManagerBuilder()
+                            .setTargetRoot(state.destinationFolder!!)
+                            .build()
+                        mFileManager!!.init()
+                    }else{
+                        mFileManager?.release()
+                        mFileManager = null
+                    }
+                    mServiceApi.fileManager = mFileManager
+                }
+            }
 
             mDvrLauncher.start()
 
@@ -127,7 +160,7 @@ class DvrService : Service() {
     override fun onDestroy() {
         mDvrLauncher.stop()
 
-        mFileManager.release()
+        mFileManager?.release()
 
         super.onDestroy()
     }

@@ -1,5 +1,6 @@
 package com.auo.dvr_ui.usecase
 
+import com.auo.dvr_ui.entity.DvrStateData
 import com.auo.dvr_ui.entity.RecordFileData
 import java.io.File
 
@@ -8,8 +9,15 @@ interface IDataSource {
         fun onUpdate(records : List<RecordFileData>)
     }
 
+    fun interface DvrStateListener{
+        fun onUpdate(state : DvrStateData)
+    }
+
+    val dvrState : DvrStateData
+
     fun getAllRecords() : List<RecordFileData>
     fun registerUpdateListener(listener: EventListener)
+    fun registerDvrStateListener(listener: DvrStateListener)
     fun lockRecord(record: RecordFileData)
     fun unlockRecord(record: RecordFileData)
     fun deleteRecord(record: RecordFileData)

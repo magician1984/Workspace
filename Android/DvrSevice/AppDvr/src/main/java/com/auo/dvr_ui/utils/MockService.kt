@@ -2,8 +2,10 @@ package com.auo.dvr_ui.utils
 
 import android.content.Context
 import com.auo.dvr_core.CamLocation
+import com.auo.dvr_core.DvrState
 import com.auo.dvr_core.IDvrService
 import com.auo.dvr_core.OnRecordUpdateListener
+import com.auo.dvr_core.OnStateUpdateListener
 import com.auo.dvr_core.RecordFile
 import com.auo.dvr_core.RecordType
 import java.io.File
@@ -12,6 +14,10 @@ class MockService(private val context: Context) : IDvrService.Stub() {
     private val mRecordFiles = mutableListOf<RecordFile>()
 
     private val mListeners = mutableListOf<OnRecordUpdateListener>()
+
+    private val mStateListeners = mutableListOf<OnStateUpdateListener>()
+
+    private var mState = DvrState(false, DvrState.ErrorType.FlashDriveNotAvailable)
 
     init {
         //random generate 200 record files. filename is {timestamp}.mp4
@@ -31,6 +37,8 @@ class MockService(private val context: Context) : IDvrService.Stub() {
     override fun getRecordFiles(): MutableList<RecordFile> {
         return mRecordFiles
     }
+
+    override fun getState(): DvrState = mState
 
     override fun lockFile(recordFile: RecordFile) {
         runWithUpdateNotify {
@@ -61,13 +69,10 @@ class MockService(private val context: Context) : IDvrService.Stub() {
             }
     }
 
-    override fun registerListener(listener: OnRecordUpdateListener?) {
-        mListeners.add(listener!!)
-    }
-
-    override fun unregisterListener(listener: OnRecordUpdateListener?) {
-        mListeners.remove(listener!!)
-    }
+    override fun registerListener(listener: OnRecordUpdateListener) : Unit = if(!mListeners.add(listener)) throw Exception("Listener already registered") else Unit
+    override fun unregisterListener(listener: OnRecordUpdateListener?) : Unit = if(!mListeners.remove(listener)) throw Exception("Listener not registered") else Unit
+    override fun registerStateListener(listener: OnStateUpdateListener) : Unit = if(!mStateListeners.add(listener)) throw Exception("Listener already registered") else Unit
+    override fun unregisterStateListener(listener: OnStateUpdateListener) : Unit = if(!mStateListeners.remove(listener)) throw Exception("Listener not registered") else Unit
 
     override fun forceClone() {
 

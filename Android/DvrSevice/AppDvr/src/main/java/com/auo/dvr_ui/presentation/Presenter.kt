@@ -7,9 +7,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material3.Card
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -29,12 +33,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_ui.entity.IUseCase
 import com.auo.dvr_ui.entity.IUseCaseDeleteFile
 import com.auo.dvr_ui.entity.IUseCaseGetCacheFile
+import com.auo.dvr_ui.entity.IUseCaseGetDvrState
 import com.auo.dvr_ui.entity.IUseCaseGetListFiles
 import com.auo.dvr_ui.entity.IUseCaseLockFile
+import com.auo.dvr_ui.entity.IUseCaseRegisterDvrStateListener
 import com.auo.dvr_ui.entity.IUseCaseRegisterListener
 import com.auo.dvr_ui.entity.IUseCaseUnlockFile
 import com.auo.dvr_ui.entity.RecordFileData
@@ -57,7 +64,9 @@ class Presenter(
         val fileList: SnapshotStateList<RecordFileData>,
         val selectedFile: RecordFileData?,
         val camLocation: CamLocation,
-        val isProtected: Boolean
+        val isProtected: Boolean,
+        val onError: Boolean,
+        val errorMessage: String?
     )
 
     internal interface IView {
@@ -71,11 +80,11 @@ class Presenter(
 
     private val mLocationTabView: IView = CameraLocationView(::onOnIntent)
     private val mListView: IView = RecordListView(::onOnIntent)
-    private val mActionBarView : IView = ActionBarView(::onOnIntent)
-    private val mReplayView : IView = ReplayView(::onOnIntent)
+    private val mActionBarView: IView = ActionBarView(::onOnIntent)
+    private val mReplayView: IView = ReplayView(::onOnIntent)
 
     private val _state: MutableState<State> =
-        mutableStateOf(State(mutableStateListOf(), null, CamLocation.Front, false))
+        mutableStateOf(State(mutableStateListOf(), null, CamLocation.Front, false, false, null))
 
     private var state by _state
 
@@ -87,7 +96,9 @@ class Presenter(
         useCaseLockFile: IUseCaseLockFile,
         useCaseUnlockFile: IUseCaseUnlockFile,
         useCaseDeleteFile: IUseCaseDeleteFile,
-        useCaseGetCacheFile: IUseCaseGetCacheFile
+        useCaseGetCacheFile: IUseCaseGetCacheFile,
+        useCaseGetDvrState: IUseCaseGetDvrState,
+        useCaseRegisterDvrStateListener: IUseCaseRegisterDvrStateListener
     ) {
         useCaseList.clear()
         useCaseList.addAll(
@@ -97,13 +108,22 @@ class Presenter(
                 useCaseLockFile,
                 useCaseUnlockFile,
                 useCaseDeleteFile,
-                useCaseGetCacheFile
+                useCaseGetCacheFile,
+                useCaseGetDvrState,
+                useCaseRegisterDvrStateListener
             )
         )
 
-        useCaseRegisterListener{
+        useCaseRegisterListener {
             backgroundScope.launch {
-                state = state.copy(fileList = mutableStateListOf<RecordFileData>().apply { addAll(it) })
+                state =
+                    state.copy(fileList = mutableStateListOf<RecordFileData>().apply { addAll(it) })
+            }
+        }
+
+        useCaseRegisterDvrStateListener {
+            backgroundScope.launch {
+                state = state.copy(onError = !it.isAvailable, errorMessage = it.errorMessage)
             }
         }
     }
@@ -113,12 +133,21 @@ class Presenter(
 
             LaunchedEffect(key1 = LocalContext.current) {
                 val list = findUseCase<IUseCaseGetListFiles>()?.invoke() ?: return@LaunchedEffect
-                state = state.copy(fileList = mutableStateListOf<RecordFileData>().apply { addAll(list) })
+                val dvrState = findUseCase<IUseCaseGetDvrState>()?.invoke() ?: return@LaunchedEffect
+
+
+                state = state.copy(
+                    fileList = mutableStateListOf<RecordFileData>().apply { addAll(list) },
+                    onError = !dvrState.isAvailable,
+                    errorMessage = dvrState.errorMessage
+                )
             }
 
-            Column(modifier = Modifier
-                .fillMaxSize()
-                .padding(it)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(it)
+            ) {
                 Row(
                     modifier = Modifier
                         .weight(1f)
@@ -132,9 +161,20 @@ class Presenter(
                         mActionBarView.Draw(modifier = Modifier.height(72.dp), state = state)
                     }
                 }
-
             }
 
+            if (state.onError) {
+                Dialog(onDismissRequest = {}) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth(0.8f)
+                            .fillMaxHeight(0.3f)
+                            .padding(16.dp)
+                    ) {
+                        Text(text = state.errorMessage?:"", modifier = Modifier.fillMaxSize().wrapContentSize(), textAlign = TextAlign.Center)
+                    }
+                }
+            }
         }
     }
 
@@ -185,12 +225,20 @@ class Presenter(
                 is IUserIntents.LockFile -> findUseCase<IUseCaseLockFile>()?.invoke(intent.file)
                 is IUserIntents.SelectFile -> state = state.copy(selectedFile = intent.file)
                 is IUserIntents.UnlockFile -> findUseCase<IUseCaseUnlockFile>()?.invoke(intent.file)
-                is IUserIntents.ViewCameraLocation -> state = state.copy(camLocation = intent.camLocation, selectedFile = null)
-                IUserIntents.ViewNormal -> state = state.copy(isProtected = false, selectedFile = null)
-                IUserIntents.ViewProtected -> state = state.copy(isProtected = true, selectedFile = null)
+                is IUserIntents.ViewCameraLocation -> state =
+                    state.copy(camLocation = intent.camLocation, selectedFile = null)
+
+                IUserIntents.ViewNormal -> state =
+                    state.copy(isProtected = false, selectedFile = null)
+
+                IUserIntents.ViewProtected -> state =
+                    state.copy(isProtected = true, selectedFile = null)
+
                 IUserIntents.UnselectFile -> state = state.copy(selectedFile = null)
-                is IUserIntents.ReplayFile ->{
-                    val cacheFile = findUseCase<IUseCaseGetCacheFile>()?.invoke(state.selectedFile?:return@launch) ?: return@launch
+                is IUserIntents.ReplayFile -> {
+                    val cacheFile = findUseCase<IUseCaseGetCacheFile>()?.invoke(
+                        state.selectedFile ?: return@launch
+                    ) ?: return@launch
                     val recordFileData = state.selectedFile!!.copy(cacheFile = cacheFile)
                     state = state.copy(selectedFile = recordFileData)
                 }

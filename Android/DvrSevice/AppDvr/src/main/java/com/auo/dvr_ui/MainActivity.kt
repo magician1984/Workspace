@@ -17,8 +17,10 @@ import com.auo.dvr_ui.usecase.IDataSource
 import com.auo.dvr_ui.usecase.IPresenter
 import com.auo.dvr_ui.usecase.UseCaseDeleteFile
 import com.auo.dvr_ui.usecase.UseCaseGetCacheFile
+import com.auo.dvr_ui.usecase.UseCaseGetDvrState
 import com.auo.dvr_ui.usecase.UseCaseGetListFiles
 import com.auo.dvr_ui.usecase.UseCaseLockFile
+import com.auo.dvr_ui.usecase.UseCaseRegisterDvrStateListener
 import com.auo.dvr_ui.usecase.UseCaseRegisterListener
 import com.auo.dvr_ui.usecase.UseCaseUnlockFile
 import com.auo.dvr_ui.utils.MockService
@@ -89,7 +91,7 @@ class MainActivity : ComponentActivity() {
                 mLock.unlock()
             }
 
-            mDataSource = Datasource(mService, cacheDir)
+            mDataSource = Datasource(this, mService, cacheDir)
 
             mPresenter.summit(
                 UseCaseGetListFiles(mDataSource),
@@ -97,7 +99,9 @@ class MainActivity : ComponentActivity() {
                 UseCaseLockFile(mDataSource),
                 UseCaseUnlockFile(mDataSource),
                 UseCaseDeleteFile(mDataSource),
-                UseCaseGetCacheFile(mDataSource)
+                UseCaseGetCacheFile(mDataSource),
+                UseCaseGetDvrState(mDataSource),
+                UseCaseRegisterDvrStateListener(mDataSource)
             )
 
             runOnUiThread {
