@@ -31,6 +31,10 @@ class DvrService : Service() {
             fun onFileUpdate(eventType:EventType, type: FileType, file: File)
         }
 
+        interface OnExternalDeviceStateChangeListener{
+            fun onExternalDeviceStateChange(available: Boolean)
+        }
+
         val configureFile : DvrConfigure
 
         var onRecordFileUpdateListener : OnRecordFileUpdateListener?

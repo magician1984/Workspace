@@ -1,5 +1,6 @@
 package com.auo.dvr_ui.presentation.contents
 
+import android.util.Log
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,6 +31,7 @@ internal class CameraLocationView(override val onIntent: (IUserIntents) -> Unit)
                 Pair(CamLocation.Right, R.drawable.baseline_filter_4_24),
             )
         }
+
 
         TabRow(modifier = modifier, selectedTabIndex = tabItems.indexOfFirst { it.first == state.camLocation }){
             tabItems.forEachIndexed { index, pair ->
