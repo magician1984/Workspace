@@ -221,7 +221,11 @@ class Presenter(
         backgroundScope.launch {
             Log.d("Presenter", "handleIntent: $intent")
             when (intent) {
-                is IUserIntents.DeleteFile -> findUseCase<IUseCaseDeleteFile>()?.invoke(intent.file)
+                is IUserIntents.DeleteFile ->{
+                    findUseCase<IUseCaseDeleteFile>()?.invoke(intent.file)
+                    if(intent.file.id == state.selectedFile?.id)
+                        state = state.copy(selectedFile = null)
+                }
                 is IUserIntents.LockFile -> findUseCase<IUseCaseLockFile>()?.invoke(intent.file)
                 is IUserIntents.SelectFile -> state = state.copy(selectedFile = intent.file)
                 is IUserIntents.UnlockFile -> findUseCase<IUseCaseUnlockFile>()?.invoke(intent.file)

@@ -185,14 +185,19 @@ internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Prese
         }
 
 
-        // When is playing, update time every second
         LaunchedEffect(key1 = isPlaying) {
             while (isPlaying) {
                 delay(300)
                 currentTime = mPlayer?.currentPosition ?: 0L
             }
+            if(!mReplayState.isPause)
+                currentTime = 0L
         }
 
+        LaunchedEffect(key1 = mPlayer?.playbackState) {
+            if(mPlayer?.playbackState == Player.STATE_ENDED)
+                currentTime = 0L
+        }
 
 
         Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
