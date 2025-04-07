@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.auo.dvr_core.CamLocation
+import com.auo.dvr_core.RecordType
 import com.auo.dvr_ui.entity.IUseCase
 import com.auo.dvr_ui.entity.IUseCaseDeleteFile
 import com.auo.dvr_ui.entity.IUseCaseGetCacheFile
@@ -48,7 +49,6 @@ import com.auo.dvr_ui.entity.IUseCaseRegisterListener
 import com.auo.dvr_ui.entity.IUseCaseUnlockFile
 import com.auo.dvr_ui.entity.RecordFileData
 import com.auo.dvr_ui.presentation.contents.ActionBarView
-import com.auo.dvr_ui.presentation.contents.CameraLocationView
 import com.auo.dvr_ui.presentation.contents.RecordListView
 import com.auo.dvr_ui.presentation.contents.ReplayView
 import com.auo.dvr_ui.ui.theme.DvrServiceTheme
@@ -84,7 +84,6 @@ class Presenter(
 
     private val useCaseList: MutableList<IUseCase> = mutableListOf()
 
-    private val mLocationTabView: IView = CameraLocationView(::onIntent)
     private val mListView: IView = RecordListView(::onIntent)
     private val mActionBarView: IView = ActionBarView(::onIntent)
     private val mReplayView: IView = ReplayView(::onIntent)
@@ -140,7 +139,9 @@ class Presenter(
         drawContent {
 
             LaunchedEffect(key1 = LocalContext.current) {
-                val list = findUseCase<IUseCaseGetListFiles>()?.invoke() ?: return@LaunchedEffect
+                val list = findUseCase<IUseCaseGetListFiles>()?.invoke()?.filter {item->
+                    if(state.isProtected) item.type == RecordType.Protected else item.type != RecordType.Protected
+                } ?: return@LaunchedEffect
                 val dvrState = findUseCase<IUseCaseGetDvrState>()?.invoke() ?: return@LaunchedEffect
                 val errorEffect = if (!dvrState.isAvailable) Effect.OnError(
                     dvrState.errorMessage ?: ""
@@ -164,8 +165,6 @@ class Presenter(
                     mReplayView.Draw(modifier = Modifier.weight(1f), state = state)
                     VerticalDivider()
                     Column(modifier = Modifier.weight(1f)) {
-                        mLocationTabView.Draw(modifier = Modifier.height(72.dp), state = state)
-
                         mListView.Draw(modifier = Modifier.weight(1f), state = state)
                         mActionBarView.Draw(modifier = Modifier.height(72.dp), state = state)
                     }
@@ -231,11 +230,28 @@ class Presenter(
                 is IUserIntents.ViewCameraLocation -> state =
                     state.copy(camLocation = intent.camLocation, selectedFile = null)
 
-                IUserIntents.ViewNormal -> state =
-                    state.copy(isProtected = false, selectedFile = null)
+                IUserIntents.ViewNormal -> {
+                    val fileList = findUseCase<IUseCaseGetListFiles>()?.invoke()
+                        ?.filter { it.type != RecordType.Protected } ?: emptyList()
 
-                IUserIntents.ViewProtected -> state =
-                    state.copy(isProtected = true, selectedFile = null)
+                    state =
+                        state.copy(fileList = mutableStateListOf<RecordFileData>().apply {
+                            addAll(
+                                fileList
+                            )
+                        }, isProtected = false, selectedFile = null)
+                }
+
+                IUserIntents.ViewProtected -> {
+                    val fileList = findUseCase<IUseCaseGetListFiles>()?.invoke()
+                        ?.filter { it.type == RecordType.Protected } ?: emptyList()
+                    state =
+                        state.copy(fileList = mutableStateListOf<RecordFileData>().apply {
+                            addAll(
+                                fileList
+                            )
+                        }, isProtected = true, selectedFile = null)
+                }
 
                 IUserIntents.UnselectFile -> state = state.copy(selectedFile = null)
                 is IUserIntents.ReplayFile -> {

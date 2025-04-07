@@ -1,9 +1,11 @@
 package com.auo.dvr_ui.presentation.contents
 
+import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,18 +15,27 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -46,11 +57,28 @@ import java.util.Date
 import java.util.Locale
 
 internal class RecordListView(override val onIntent: (IUserIntents) -> Unit) : Presenter.IView {
-    companion object{
+    companion object {
         private const val NAME_FORMAT = "yyyy-MM-dd HH:mm:ss"
     }
 
-    private val dateFormat : SimpleDateFormat = SimpleDateFormat(NAME_FORMAT, Locale.getDefault())
+    private sealed class IFileControlIntent(val file: RecordFileData) {
+        class Delete(file: RecordFileData) : IFileControlIntent(file)
+        class LockSwitch(file: RecordFileData) : IFileControlIntent(file)
+        class SelectSwitch(file: RecordFileData) : IFileControlIntent(file)
+    }
+
+    private val tabItems = listOf(
+        Pair(CamLocation.Front, R.drawable.baseline_filter_1_24),
+        Pair(CamLocation.Rear, R.drawable.baseline_filter_2_24),
+        Pair(CamLocation.Left, R.drawable.baseline_filter_3_24),
+        Pair(CamLocation.Right, R.drawable.baseline_filter_4_24),
+    )
+
+    private fun interface IFileControlHandler {
+        fun onIntent(intent: IFileControlIntent)
+    }
+
+    private val dateFormat: SimpleDateFormat = SimpleDateFormat(NAME_FORMAT, Locale.getDefault())
 
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
@@ -58,35 +86,147 @@ internal class RecordListView(override val onIntent: (IUserIntents) -> Unit) : P
         modifier: Modifier,
         state: Presenter.State
     ) {
+
+
+        var selectedCamLocation by remember {
+            mutableStateOf(state.camLocation)
+        }
+
+        var triggerFromTab by remember {
+            mutableStateOf(false)
+        }
+
         val pageState = rememberPagerState(pageCount = { CamLocation.entries.size })
 
+        LaunchedEffect(selectedCamLocation) {
+            onIntent(IUserIntents.ViewCameraLocation(selectedCamLocation))
+        }
+
+        Column(modifier = modifier) {
+            TabLayout(
+                modifier = Modifier.wrapContentHeight(),
+                pagerState = pageState,
+                selectedCamLocation = selectedCamLocation,
+                onSelectedChanged = {
+                    triggerFromTab = true
+                    selectedCamLocation = it
+                })
+
+            ListLayout(
+                modifier = Modifier.weight(1f),
+                pagerState = pageState,
+                files = state.fileList,
+                selectedFile = state.selectedFile,
+                selectedCamLocation = selectedCamLocation,
+                onCamLocationChanged = {
+                    Log.d(
+                        "RecordListView",
+                        "onCamLocationChanged: (changed : $it, triggerFromTab : $triggerFromTab, selectedCamLocation : $selectedCamLocation)"
+                    )
+                    if (!triggerFromTab)
+                        selectedCamLocation = it
+                    else if (it == selectedCamLocation)
+                        triggerFromTab = false
+                }
+            ) {
+                val file = it.file
+                val userIntent = when (it) {
+                    is IFileControlIntent.Delete -> {
+                        if (file.type == RecordType.Protected)
+                            IUserIntents.ConfirmDeleteFile(file)
+                        else
+                            IUserIntents.DeleteFile(file)
+                    }
+
+                    is IFileControlIntent.LockSwitch -> {
+                        if (file.type == RecordType.Locked)
+                            IUserIntents.UnlockFile(file)
+                        else
+                            IUserIntents.LockFile(file)
+                    }
+
+                    is IFileControlIntent.SelectSwitch -> {
+                        if (state.selectedFile?.id == file.id)
+                            IUserIntents.UnselectFile
+                        else
+                            IUserIntents.SelectFile(file)
+                    }
+                }
+                onIntent(userIntent)
+            }
+        }
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    private fun TabLayout(
+        modifier: Modifier,
+        pagerState : PagerState,
+        selectedCamLocation: CamLocation,
+        onSelectedChanged: (CamLocation) -> Unit
+    ) {
+        val selectedTabIndex = tabItems.indexOfFirst { it.first == selectedCamLocation }
+
+        TabRow(modifier = modifier, selectedTabIndex = selectedTabIndex, indicator = {tabPositions ->
+            TabRowDefaults.SecondaryIndicator(modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]))
+        }) {
+            tabItems.forEachIndexed { index, pair ->
+                val isSelected = index == selectedTabIndex
+                Tab(
+                    modifier = Modifier.fillMaxHeight(),
+                    selected = isSelected,
+                    onClick = {
+                        if (!isSelected)
+                            onSelectedChanged(pair.first)
+                    }) {
+                    Icon(
+                        painter = painterResource(id = pair.second),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .padding(bottom = 4.dp, top = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    private fun ListLayout(
+        modifier: Modifier,
+        pagerState: PagerState,
+        files: List<RecordFileData>,
+        selectedFile: RecordFileData?,
+        selectedCamLocation: CamLocation,
+        onCamLocationChanged: (CamLocation) -> Unit,
+        handler: IFileControlHandler
+    ) {
         val coroutineScope = rememberCoroutineScope()
 
-        LaunchedEffect(key1 = state.camLocation) {
+        val selectedIndex = CamLocation.entries.indexOf(selectedCamLocation)
+
+        LaunchedEffect(selectedIndex) {
             coroutineScope.launch {
-                val targetPage = CamLocation.entries.indexOf(state.camLocation)
-                if(pageState.currentPage != targetPage)
-                    pageState.animateScrollToPage(targetPage)
+                pagerState.animateScrollToPage(selectedIndex)
             }
         }
 
-        LaunchedEffect(pageState.currentPage) {
+        LaunchedEffect(pagerState.currentPage) {
             coroutineScope.launch {
-                val page = pageState.currentPage
-                if(state.camLocation != CamLocation.entries[page])
-                    onIntent(IUserIntents.ViewCameraLocation(CamLocation.entries[page]))
+                onCamLocationChanged(CamLocation.entries[pagerState.currentPage])
             }
         }
 
-        HorizontalPager(state = pageState, modifier = modifier) { page ->
+        HorizontalPager(state = pagerState, modifier = modifier) { page ->
             val subList =
-                state.fileList.filter { it.location == CamLocation.entries[page] && if (state.isProtected) it.type == RecordType.Protected else it.type != RecordType.Protected }
+                files.filter { it.location == CamLocation.entries[page] }
 
             RecordList(
                 modifier = Modifier.fillMaxSize(),
                 recordList = subList,
-                selectedFile = state.selectedFile,
-                onIntent = onIntent
+                selectedFile = selectedFile,
+                handler = handler
             )
         }
     }
@@ -96,7 +236,7 @@ internal class RecordListView(override val onIntent: (IUserIntents) -> Unit) : P
         modifier: Modifier,
         recordList: List<RecordFileData>,
         selectedFile: RecordFileData?,
-        onIntent: (IUserIntents) -> Unit
+        handler: IFileControlHandler
     ) {
         val itemHeight = (LocalConfiguration.current.screenHeightDp / 10).dp
 
@@ -112,7 +252,7 @@ internal class RecordListView(override val onIntent: (IUserIntents) -> Unit) : P
                         .height(itemHeight),
                     recordFileData = record,
                     isSelected = record.id == selectedFile?.id,
-                    onIntent = onIntent
+                    handler = handler
                 )
             }
         }
@@ -123,7 +263,7 @@ internal class RecordListView(override val onIntent: (IUserIntents) -> Unit) : P
         modifier: Modifier,
         recordFileData: RecordFileData,
         isSelected: Boolean = false,
-        onIntent: (IUserIntents) -> Unit,
+        handler: IFileControlHandler
     ) {
         val lockerPainterRes = remember(recordFileData.type) {
             if (recordFileData.type == RecordType.Locked)
@@ -143,11 +283,7 @@ internal class RecordListView(override val onIntent: (IUserIntents) -> Unit) : P
                 .fillMaxWidth()
                 .scale(scale),
             onClick = {
-                onIntent(
-                    if (isSelected) IUserIntents.UnselectFile else IUserIntents.SelectFile(
-                        recordFileData
-                    )
-                )
+                handler.onIntent(IFileControlIntent.SelectSwitch(recordFileData))
             },
             border = BorderStroke(2.dp, if (isSelected) Color.Red else Color.Transparent)
         ) {
@@ -157,41 +293,42 @@ internal class RecordListView(override val onIntent: (IUserIntents) -> Unit) : P
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if(recordFileData.type == RecordType.Protected){
+                if (recordFileData.type == RecordType.Protected) {
                     // No show icon
-                    Spacer(modifier = Modifier
-                        .fillMaxHeight()
-                        .aspectRatio(1f)
-                        .padding(4.dp))
-                }else{
-                    Icon(painter = painterResource(lockerPainterRes),
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .aspectRatio(1f)
+                            .padding(4.dp)
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(lockerPainterRes),
                         contentDescription = "",
                         modifier = Modifier
                             .fillMaxHeight()
                             .aspectRatio(1f)
                             .padding(4.dp)
                             .clickable {
-                                if (recordFileData.type == RecordType.Locked)
-                                    onIntent(IUserIntents.UnlockFile(recordFileData))
-                                else
-                                    onIntent(IUserIntents.LockFile(recordFileData))
+                                handler.onIntent(IFileControlIntent.LockSwitch(recordFileData))
                             })
                 }
 
-                Text(text = dateFormat.format(Date(recordFileData.createTime)), modifier = Modifier.weight(1f), fontSize = 48.sp, textAlign = TextAlign.Center)
-                Icon(painter = painterResource(deletePainterRes),
+                Text(
+                    text = dateFormat.format(Date(recordFileData.createTime)),
+                    modifier = Modifier.weight(1f),
+                    fontSize = 48.sp,
+                    textAlign = TextAlign.Center
+                )
+                Icon(
+                    painter = painterResource(deletePainterRes),
                     contentDescription = "",
                     modifier = Modifier
                         .fillMaxHeight()
                         .aspectRatio(1f)
                         .padding(4.dp)
                         .clickable {
-                            val intent = if(recordFileData.type == RecordType.Protected)
-                                IUserIntents.ConfirmDeleteFile(recordFileData)
-                            else
-                                IUserIntents.DeleteFile(recordFileData)
-
-                            onIntent(intent)
+                            handler.onIntent(IFileControlIntent.Delete(recordFileData))
                         })
             }
         }
