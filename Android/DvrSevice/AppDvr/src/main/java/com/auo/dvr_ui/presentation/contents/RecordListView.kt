@@ -64,8 +64,9 @@ internal class RecordListView(override val onIntent: (IUserIntents) -> Unit) : P
 
         LaunchedEffect(key1 = state.camLocation) {
             coroutineScope.launch {
-                if(pageState.currentPage != CamLocation.entries.indexOf(state.camLocation))
-                    pageState.animateScrollToPage(CamLocation.entries.indexOf(state.camLocation))
+                val targetPage = CamLocation.entries.indexOf(state.camLocation)
+                if(pageState.currentPage != targetPage)
+                    pageState.animateScrollToPage(targetPage)
             }
         }
 

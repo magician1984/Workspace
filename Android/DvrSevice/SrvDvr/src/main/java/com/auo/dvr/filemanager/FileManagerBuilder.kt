@@ -19,7 +19,7 @@ class FileManagerBuilder : DvrService.IFileManager.Builder {
 
         val operatorMethods = OperatorMethods()
 
-        val injector = FileManagerInjector(FileParser(), BufferedRepo(targetRoot, operatorMethods), operatorMethods, EventHandler())
+        val injector = FileManagerInjector(FileParser(), BufferedRepo(targetRoot, operatorMethods), operatorMethods, EventHandler(Environment.getDataDirectory()))
 
         return FileManager(injector)
     }

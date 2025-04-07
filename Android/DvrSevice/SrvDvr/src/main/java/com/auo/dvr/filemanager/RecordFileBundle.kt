@@ -5,7 +5,7 @@ import com.auo.dvr_core.RecordType
 import com.auo.dvr_core.RecordFile
 import java.io.File
 
-internal data class RecordFileBundle(var recordFile: RecordFile, var info: Info) {
+internal data class RecordFileBundle(val recordFile: RecordFile, val info: Info) {
     companion object{
         fun toRecordFileList(recordFileBundles: List<RecordFileBundle>) : List<RecordFile> = recordFileBundles.map { it.recordFile }
         fun toRecordFile(recordFileBundle: RecordFileBundle) : RecordFile = recordFileBundle.recordFile

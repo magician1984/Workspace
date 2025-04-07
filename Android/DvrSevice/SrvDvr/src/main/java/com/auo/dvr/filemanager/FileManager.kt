@@ -17,7 +17,8 @@ internal class FileManager internal constructor(private val injector: FileManage
     }
 
     internal interface IEventHandler {
-        fun handleEvent(event: RecordFileBundle, records: List<RecordFileBundle>): RecordFileBundle
+        var onComplete : ((File)->Unit)?
+        fun handleEvent(event: RecordFileBundle, writingFile : RecordFileBundle, previousFileBundle : RecordFileBundle)
     }
 
     interface IOperatorMethods {
@@ -91,7 +92,7 @@ internal class FileManager internal constructor(private val injector: FileManage
     override fun copyFile(recordFile: RecordFile, destPath: String) {
         val recordFileBundle = findFileOrThrow(recordFile)
 
-        if (recordFileBundle != mHoldingRecord)
+        if (mHoldingRecord != null && recordFileBundle != mHoldingRecord)
             throw FileManagerApiException("Copy", "File is holding by another thread")
 
         lock.lock()
@@ -106,19 +107,21 @@ internal class FileManager internal constructor(private val injector: FileManage
             mHoldingRecord = null
             lock.unlock()
         }
-
     }
 
     override fun deleteFile(recordFile: RecordFile) = tryWaitForCopy(recordFile){
         mRepo.remove(it.id)
+        recordUpdateListener?.onUpdate()
     }
 
     override fun lockFile(recordFile: RecordFile) = tryWaitForCopy(recordFile){
         mRepo.lock(it)
+        recordUpdateListener?.onUpdate()
     }
 
     override fun unlockFile(recordFile: RecordFile) = tryWaitForCopy(recordFile){
         mRepo.unlock(it)
+        recordUpdateListener?.onUpdate()
     }
 
     override fun forceClone() {
@@ -142,6 +145,7 @@ internal class FileManager internal constructor(private val injector: FileManage
                 DvrService.IDvrLauncher.FileType.Record -> {
                     val recordFileBundle: RecordFileBundle = mParser.parseRecord(file)
                     mRepo.add(recordFileBundle)
+                    recordUpdateListener?.onUpdate()
                 }
             }
         }else{

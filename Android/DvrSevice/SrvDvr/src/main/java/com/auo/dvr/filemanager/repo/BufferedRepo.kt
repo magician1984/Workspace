@@ -1,5 +1,6 @@
 package com.auo.dvr.filemanager.repo
 
+import android.util.Log
 import com.auo.dvr.filemanager.FileInfo
 import com.auo.dvr.filemanager.FileManager
 import com.auo.dvr.filemanager.FileManagerException
@@ -94,9 +95,9 @@ internal class BufferedRepo(override val root: File,
 
         operator.move(recordFile.file!!, fileInfo.file, true)
 
-        recordFile.recordFile = recordFile.recordFile.copy(type = RecordType.Locked)
+        Log.d("BufferedRepo", "lock: ${recordFile.file!!.absolutePath} -> ${fileInfo.file.absolutePath}")
 
-        recordFile.info = fileInfo
+        _files[index] = recordFile.copy(recordFile = recordFile.recordFile.copy(type = RecordType.Locked), info = fileInfo)
     }
 
     override fun unlock(file: RecordFileBundle){
@@ -116,9 +117,9 @@ internal class BufferedRepo(override val root: File,
 
         operator.move(recordFile.file!!, fileInfo.file, true)
 
-        recordFile.recordFile = recordFile.recordFile.copy(type = RecordType.Normal)
+        Log.d("BufferedRepo", "unlock: ${recordFile.file!!.absolutePath} -> ${fileInfo.file.absolutePath}")
 
-        recordFile.info = fileInfo
+        _files[index] = recordFile.copy(recordFile = recordFile.recordFile.copy(type = RecordType.Normal), info = fileInfo)
     }
 
     private inline fun <R> withCameraFolder(camLocation: CamLocation, func: (File) -> R): R {

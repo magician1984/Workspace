@@ -11,32 +11,45 @@ class Workaround {
         private const val RECORD_FILE_EXTENSION = "mp4"
     }
 
-    private val executor = Executors.newFixedThreadPool(2)
+    private val executor = Executors.newFixedThreadPool(1)
 
-    private val runningMap : MutableList<File> = mutableListOf()
+
 
     fun process(file: File){
-        if(runningMap.contains(file))
-            return
+        executor.execute(WorkaroundTask(file))
+    }
 
-        Log.d("Workaround", "process: file = ${file.absolutePath}")
+    private class WorkaroundTask(val file: File) : Runnable{
+        override fun run() {
+            Log.d("Workaround", "process: file = ${file.absolutePath}")
 
-        runningMap.add(file)
+            if (!file.exists()) {
+                Log.e("Workaround", "process: file not exists")
+                return
+            }
 
-        executor.execute {
-            val ret = FFmpegKit.execute(
-                "-re -i ${file.absolutePath} -c:v copy -c:a copy ${
-                    file.absolutePath.replace(
-                        WORKAROUND_FILE_EXTENSION,
-                        RECORD_FILE_EXTENSION
-                    )
-                }"
+            val outputFile = File(
+                file.parent,
+                file.name.replace(WORKAROUND_FILE_EXTENSION, RECORD_FILE_EXTENSION)
             )
-            runningMap.remove(file)
+
+            val command = listOf(
+                "-re",
+                "-f", "hevc",
+                "-i", file.absolutePath,
+                "-c", "copy",
+                outputFile.absolutePath
+            ).joinToString(" ") { "\"$it\"" } // wrap in quotes for safety
+
+            Log.d("Workaround", "FFmpeg command: $command")
+
+            val ret = FFmpegKit.execute(command)
 
             Log.d("Workaround", "process: ret = ${ret.returnCode}")
+
+            file.delete()
+
+            Thread.sleep(500)
         }
-
-
     }
 }

@@ -55,24 +55,24 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun initializeService() {
-//        val intent = Intent(this, DvrService::class.java)
-//        bindService(intent, object : ServiceConnection {
-//            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-//                mLock.lock()
-//                try {
-//                    mService = IDvrService.Stub.asInterface(service)
-//                    serviceReadyCondition.signal()
-//                } finally {
-//                    mLock.unlock()
-//                }
-//            }
-//
-//            override fun onServiceDisconnected(name: ComponentName?) {
-//                TODO("Not yet implemented")
-//            }
-//        }, BIND_AUTO_CREATE)
+        val intent = Intent(this, DvrService::class.java)
+        bindService(intent, object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                mLock.lock()
+                try {
+                    mService = IDvrService.Stub.asInterface(service)
+                    serviceReadyCondition.signal()
+                } finally {
+                    mLock.unlock()
+                }
+            }
 
-        mService = MockService(this)
+            override fun onServiceDisconnected(name: ComponentName?) {
+                TODO("Not yet implemented")
+            }
+        }, BIND_AUTO_CREATE)
+
+//        mService = MockService(this)
     }
 
     private fun initializePresenter(){
