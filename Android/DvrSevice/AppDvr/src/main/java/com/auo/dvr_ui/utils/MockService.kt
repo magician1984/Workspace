@@ -17,7 +17,7 @@ class MockService(private val context: Context) : IDvrService.Stub() {
 
     private val mStateListeners = mutableListOf<OnStateUpdateListener>()
 
-    private var mState = DvrState(false, DvrState.ErrorType.FlashDriveNotAvailable)
+    private var mState = DvrState(true, DvrState.ErrorType.None)
 
     init {
         //random generate 200 record files. filename is {timestamp}.mp4

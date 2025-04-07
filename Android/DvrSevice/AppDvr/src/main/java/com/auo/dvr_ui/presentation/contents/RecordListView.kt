@@ -184,7 +184,14 @@ internal class RecordListView(override val onIntent: (IUserIntents) -> Unit) : P
                         .fillMaxHeight()
                         .aspectRatio(1f)
                         .padding(4.dp)
-                        .clickable { onIntent(IUserIntents.DeleteFile(recordFileData)) })
+                        .clickable {
+                            val intent = if(recordFileData.type == RecordType.Protected)
+                                IUserIntents.ConfirmDeleteFile(recordFileData)
+                            else
+                                IUserIntents.DeleteFile(recordFileData)
+
+                            onIntent(intent)
+                        })
             }
         }
     }

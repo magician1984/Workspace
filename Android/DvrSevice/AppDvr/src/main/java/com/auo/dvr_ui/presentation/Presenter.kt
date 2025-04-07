@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -60,13 +62,17 @@ class Presenter(
     private val renderer: ComponentActivity
 ) : IPresenter {
 
+    internal sealed class Effect {
+        data class OnError(val message: String) : Effect()
+        data class OnRemoveProtectedFile(val file: RecordFileData) : Effect()
+    }
+
     internal data class State(
         val fileList: SnapshotStateList<RecordFileData>,
         val selectedFile: RecordFileData?,
         val camLocation: CamLocation,
         val isProtected: Boolean,
-        val onError: Boolean,
-        val errorMessage: String?
+        val effect: Effect?
     )
 
     internal interface IView {
@@ -78,13 +84,13 @@ class Presenter(
 
     private val useCaseList: MutableList<IUseCase> = mutableListOf()
 
-    private val mLocationTabView: IView = CameraLocationView(::onOnIntent)
-    private val mListView: IView = RecordListView(::onOnIntent)
-    private val mActionBarView: IView = ActionBarView(::onOnIntent)
-    private val mReplayView: IView = ReplayView(::onOnIntent)
+    private val mLocationTabView: IView = CameraLocationView(::onIntent)
+    private val mListView: IView = RecordListView(::onIntent)
+    private val mActionBarView: IView = ActionBarView(::onIntent)
+    private val mReplayView: IView = ReplayView(::onIntent)
 
     private val _state: MutableState<State> =
-        mutableStateOf(State(mutableStateListOf(), null, CamLocation.Front, false, false, null))
+        mutableStateOf(State(mutableStateListOf(), null, CamLocation.Front, false, null))
 
     private var state by _state
 
@@ -123,7 +129,9 @@ class Presenter(
 
         useCaseRegisterDvrStateListener {
             backgroundScope.launch {
-                state = state.copy(onError = !it.isAvailable, errorMessage = it.errorMessage)
+                val errorEffect =
+                    if (!it.isAvailable) Effect.OnError(it.errorMessage ?: "") else null
+                state = state.copy(effect = errorEffect)
             }
         }
     }
@@ -134,12 +142,13 @@ class Presenter(
             LaunchedEffect(key1 = LocalContext.current) {
                 val list = findUseCase<IUseCaseGetListFiles>()?.invoke() ?: return@LaunchedEffect
                 val dvrState = findUseCase<IUseCaseGetDvrState>()?.invoke() ?: return@LaunchedEffect
-
+                val errorEffect = if (!dvrState.isAvailable) Effect.OnError(
+                    dvrState.errorMessage ?: ""
+                ) else state.effect
 
                 state = state.copy(
                     fileList = mutableStateListOf<RecordFileData>().apply { addAll(list) },
-                    onError = !dvrState.isAvailable,
-                    errorMessage = dvrState.errorMessage
+                    effect = errorEffect
                 )
             }
 
@@ -163,18 +172,7 @@ class Presenter(
                 }
             }
 
-            if (state.onError) {
-                Dialog(onDismissRequest = {}) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth(0.8f)
-                            .fillMaxHeight(0.3f)
-                            .padding(16.dp)
-                    ) {
-                        Text(text = state.errorMessage?:"", modifier = Modifier.fillMaxSize().wrapContentSize(), textAlign = TextAlign.Center)
-                    }
-                }
-            }
+            ProcessEffect(effect = state.effect)
         }
     }
 
@@ -216,16 +214,17 @@ class Presenter(
         }
     }
 
-    private fun onOnIntent(intent: IUserIntents) {
+    private fun onIntent(intent: IUserIntents) {
 
         backgroundScope.launch {
             Log.d("Presenter", "handleIntent: $intent")
             when (intent) {
-                is IUserIntents.DeleteFile ->{
+                is IUserIntents.DeleteFile -> {
                     findUseCase<IUseCaseDeleteFile>()?.invoke(intent.file)
-                    if(intent.file.id == state.selectedFile?.id)
+                    if (intent.file.id == state.selectedFile?.id)
                         state = state.copy(selectedFile = null)
                 }
+
                 is IUserIntents.LockFile -> findUseCase<IUseCaseLockFile>()?.invoke(intent.file)
                 is IUserIntents.SelectFile -> state = state.copy(selectedFile = intent.file)
                 is IUserIntents.UnlockFile -> findUseCase<IUseCaseUnlockFile>()?.invoke(intent.file)
@@ -246,6 +245,57 @@ class Presenter(
                     val recordFileData = state.selectedFile!!.copy(cacheFile = cacheFile)
                     state = state.copy(selectedFile = recordFileData)
                 }
+
+                is IUserIntents.ConfirmDeleteFile -> {
+                    state = state.copy(effect = Effect.OnRemoveProtectedFile(intent.file))
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun ProcessEffect(effect: Effect?) {
+        val mEffect = effect ?: return
+
+        when (mEffect) {
+            is Effect.OnError -> {
+                Dialog(onDismissRequest = {}) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth(0.8f)
+                            .fillMaxHeight(0.3f)
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = mEffect.message ?: "", modifier = Modifier
+                                .fillMaxSize()
+                                .wrapContentSize(), textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+
+            is Effect.OnRemoveProtectedFile -> {
+                AlertDialog(
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .padding(16.dp),
+                    onDismissRequest = { /*TODO*/ },
+                    title = { Text(text = "Confirm Delete") },
+                    text = { Text(text = "Are you sure you want to delete this file?") },
+                    dismissButton = {
+                        TextButton(onClick = { state = state.copy(effect = null) }) {
+                            Text(text = "Dismiss")
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            state = state.copy(effect = null)
+                            onIntent(IUserIntents.DeleteFile(mEffect.file))
+                        }) {
+                            Text(text = "Confirm")
+                        }
+                    })
             }
         }
     }
