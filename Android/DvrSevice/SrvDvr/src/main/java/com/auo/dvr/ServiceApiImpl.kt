@@ -1,110 +1,110 @@
 package com.auo.dvr
 
+import com.auo.dvr.data.UserIntent
 import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrException
 import com.auo.dvr_core.DvrState
 import com.auo.dvr_core.OnConfigureUpdateListener
 import com.auo.dvr_core.OnRecordUpdateListener
 import com.auo.dvr_core.OnStateUpdateListener
+import com.auo.dvr_core.RecordDuration
 import com.auo.dvr_core.RecordFile
 
-class ServiceApiImpl : DvrService.IServiceApi() {
-    private val mListeners: MutableList<OnRecordUpdateListener> = mutableListOf()
+class ServiceApiImpl(dvrLauncher: DvrService.IDvrLauncher) : DvrService.IServiceApi(dvrLauncher) {
+    private val mRecordUpdateListeners: MutableList<OnRecordUpdateListener> = mutableListOf()
 
-    private val stateListeners: MutableList<OnStateUpdateListener> = mutableListOf()
+    private val mStateUpdateListeners: MutableList<OnStateUpdateListener> = mutableListOf()
+
+    private val mConfigUpdateListener: MutableList<OnConfigureUpdateListener> = mutableListOf()
 
     private var mState: DvrState = DvrState(false, DvrState.ErrorType.None)
         set(value) {
             field = value
-            stateListeners.forEach {
+            mStateUpdateListeners.forEach {
                 it.onStateUpdate()
             }
         }
 
-    override var fileManager: DvrService.IFileManager? = null
+    private var mConfigure: DvrConfigure = DvrConfigure(duration = RecordDuration.FiveMin)
         set(value) {
             field = value
-            val isAvailable = value != null
-            mState = DvrState(
-                isAvailable,
-                if (isAvailable) DvrState.ErrorType.None else DvrState.ErrorType.FlashDriveNotAvailable
-            )
-            fileManager?.recordUpdateListener = DvrService.IFileManager.RecordUpdateListener {
-                mListeners.forEach {
-                    it.onUpdate()
-                }
+            mConfigUpdateListener.forEach {
+                it.onUpdate()
             }
         }
+
+    init {
+        mDvrLauncher.onServiceStateUpdateListener =
+            DvrService.IDvrLauncher.OnServiceStateUpdateListener { state ->
+                mState = state
+            }
+    }
 
     override fun updateState(state: DvrState) {
         mState = state
     }
 
-    override fun getRecordFiles(): List<RecordFile>{
-        return try{
-            withFileManager { it.recordFiles }
-        }catch (e : DvrException){
-            emptyList()
-        }
-    }
+    override fun getRecordFiles(): List<RecordFile> =
+        mDvrLauncher.handleUserIntent(UserIntent.GetRecordFiles)
+
     override fun getState(): DvrState = mState
-    override fun getConfigure(): DvrConfigure {
-        TODO("Not yet implemented")
-    }
+    override fun getConfigure(): DvrConfigure = mConfigure
+
+    override fun updataConfigure(configure: DvrConfigure): Unit =
+        mDvrLauncher.handleUserIntent(UserIntent.UpdateConfig(configure))
 
     override fun lockFile(recordFile: RecordFile): Unit =
-        withFileManager { it.lockFile(recordFile) }
+        mDvrLauncher.handleUserIntent(UserIntent.LockRecord(recordFile))
 
     override fun unlockFile(recordFile: RecordFile): Unit =
-        withFileManager { it.unlockFile(recordFile) }
+        mDvrLauncher.handleUserIntent(UserIntent.UnlockRecord(recordFile))
 
     override fun deleteFile(recordFile: RecordFile): Unit =
-        withFileManager { it.deleteFile(recordFile) }
+        mDvrLauncher.handleUserIntent(UserIntent.DeleteRecord(recordFile))
 
     override fun copyFile(recordFile: RecordFile, destPath: String): Unit =
-        withFileManager { it.copyFile(recordFile, destPath) }
+        mDvrLauncher.handleUserIntent(UserIntent.CopyRecord(recordFile, destPath))
 
     override fun registerListener(listener: OnRecordUpdateListener): Unit =
-        if (!mListeners.add(listener)) throw DvrException(
+        if (!mRecordUpdateListeners.add(listener)) throw DvrException(
             "DvrService",
             "Listener already registered"
         ) else Unit
 
     override fun unregisterListener(listener: OnRecordUpdateListener): Unit =
-        if (!mListeners.remove(listener)) throw DvrException(
+        if (!mRecordUpdateListeners.remove(listener)) throw DvrException(
             "DvrService",
             "Listener not registered"
         ) else Unit
 
     override fun registerStateListener(listener: OnStateUpdateListener): Unit =
-        if (!stateListeners.add(listener)) throw DvrException(
+        if (!mStateUpdateListeners.add(listener)) throw DvrException(
             "DvrService",
             "Listener already registered"
         ) else Unit
 
     override fun unregisterStateListener(listener: OnStateUpdateListener): Unit =
-        if (!stateListeners.remove(listener)) throw DvrException(
+        if (!mStateUpdateListeners.remove(listener)) throw DvrException(
             "DvrService",
             "Listener not registered"
         ) else Unit
 
-    override fun registerConfigureListener(listener: OnConfigureUpdateListener?) {
+    override fun registerConfigureListener(listener: OnConfigureUpdateListener): Unit =
+        if (!mConfigUpdateListener.add(listener)) throw DvrException(
+            "DvrService",
+            "Listener already registered"
+        ) else Unit
+
+    override fun unregisterConfigureListener(listener: OnConfigureUpdateListener): Unit =
+        if (!mConfigUpdateListener.remove(listener)) throw DvrException(
+            "DvrService",
+            "Listener not registered"
+        ) else Unit
+
+
+    override fun unmountFlash() : Unit = mDvrLauncher.handleUserIntent(UserIntent.UnmountStorage)
+
+    override fun forceClone() {
         TODO("Not yet implemented")
-    }
-
-    override fun unregisterConfigureListener(listener: OnConfigureUpdateListener?) {
-        TODO("Not yet implemented")
-    }
-
-    override fun unmountFlash() {
-        TODO("Not yet implemented")
-    }
-
-    override fun forceClone(): Unit = withFileManager { it.forceClone() }
-
-    private inline fun <R> withFileManager(block: (DvrService.IFileManager) -> R): R {
-        if (fileManager == null)
-            throw DvrException("DvrService", "FileManager is not initialized")
-        return block(fileManager!!)
     }
 }

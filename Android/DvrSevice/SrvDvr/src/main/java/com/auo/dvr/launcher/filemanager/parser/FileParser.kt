@@ -1,11 +1,11 @@
-package com.auo.dvr.filemanager.parser
+package com.auo.dvr.launcher.filemanager.parser
 
 import android.util.Log
-import com.auo.dvr.filemanager.RecordFileBundle
-import com.auo.dvr.filemanager.EventInfo
-import com.auo.dvr.filemanager.FileInfo
-import com.auo.dvr.filemanager.FileManager
-import com.auo.dvr.filemanager.FileManagerException
+import com.auo.dvr.data.RecordFileBundle
+import com.auo.dvr.launcher.filemanager.EventInfo
+import com.auo.dvr.launcher.filemanager.FileInfo
+import com.auo.dvr.launcher.filemanager.FileManager
+import com.auo.dvr.launcher.filemanager.FileManagerException
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.RecordFile
 import com.auo.dvr_core.RecordType
@@ -48,7 +48,7 @@ internal class FileParser : FileManager.IFileParser, FileManager.IReverseParser 
         return RecordFileBundle(recordFile, FileInfo(file))
     }
 
-    private fun parseFileName(filename: String) : InfoBundle{
+    private fun parseFileName(filename: String) : InfoBundle {
         val content :List<String> = filename.substringBeforeLast('.').split('_')
         val locationDef : CamLocation = CamLocation.entries.find { it.code == content[0].toIntOrNull() } ?: throw FileParserException(File(filename))
         val createTime : Long = content[1].toLongOrNull() ?: throw FileParserException(File(filename))

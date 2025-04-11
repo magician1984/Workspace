@@ -1,5 +1,6 @@
-package com.auo.dvr.filemanager
+package com.auo.dvr.launcher.filemanager
 
+import com.auo.dvr.data.RecordFileBundle
 import java.io.File
 
 internal data class EventInfo(val time : Long, val eventFlag : Int) : RecordFileBundle.Info{

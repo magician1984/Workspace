@@ -1,7 +1,7 @@
-package com.auo.dvr.filemanager.operator
+package com.auo.dvr.launcher.filemanager.operator
 
-import com.auo.dvr.filemanager.FileManager
-import com.auo.dvr.filemanager.FileManagerException
+import com.auo.dvr.launcher.filemanager.FileManager
+import com.auo.dvr.launcher.filemanager.FileManagerException
 import java.io.File
 import java.io.IOException
 

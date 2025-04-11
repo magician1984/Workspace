@@ -1,7 +1,8 @@
-package com.auo.dvr.filemanager
+package com.auo.dvr.launcher.filemanager
 
 import android.util.Log
-import com.auo.dvr.DvrService
+import com.auo.dvr.data.RecordFileBundle
+import com.auo.dvr.launcher.DvrLauncher
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.RecordFile
 import com.auo.dvr_core.RecordType
@@ -10,7 +11,7 @@ import java.util.EnumMap
 import java.util.concurrent.locks.ReentrantLock
 
 internal class FileManager internal constructor(private val injector: FileManagerInjector) :
-    DvrService.IFileManager {
+    DvrLauncher.IFileManager {
 
     internal interface IFileParser {
         fun parseEvent(file: File): RecordFileBundle
@@ -62,13 +63,10 @@ internal class FileManager internal constructor(private val injector: FileManage
         var callback : ((predicate : (RecordFileBundle) -> Boolean) -> Unit)?
     }
 
-    override var recordUpdateListener: DvrService.IFileManager.RecordUpdateListener? = null
+    override var recordUpdateListener: DvrLauncher.IFileManager.RecordUpdateListener? = null
 
     override val recordFiles: List<RecordFile>
-        get() = mRepo.files.map { RecordFileBundle.toRecordFile(it) }
-
-    private var mState: FileManagerState =
-        FileManagerState.None
+        get() = RecordFileBundle.toRecordFileList(mRepo.files)
 
     private val mRepo: IRepo
         get() = injector.repo
@@ -85,6 +83,8 @@ internal class FileManager internal constructor(private val injector: FileManage
 
     private val completeCondition = lock.newCondition()
 
+    private var mIsInitialized = false
+
     private val mCurrentRecordFile: EnumMap<CamLocation, RecordFileBundle?> =
         EnumMap<CamLocation, RecordFileBundle?>(
             CamLocation::class.java
@@ -93,17 +93,23 @@ internal class FileManager internal constructor(private val injector: FileManage
         }
 
     override fun init() {
-        stateFlow(expectState = FileManagerState.None, newState = FileManagerState.Ready) {
-            mRepo.init()
-            mEventHandler.onComplete = ::handleEvent
-        }
+        if(mIsInitialized)
+            return
+
+        mRepo.init()
+        mEventHandler.onComplete = ::handleEvent
+
+        mIsInitialized = true
     }
 
     override fun release() {
-        stateFlow(expectState = FileManagerState.Ready, newState = FileManagerState.None) {
-            mRepo.clean()
-            mRepo.release()
-        }
+        if(!mIsInitialized)
+            return
+
+        mRepo.clean()
+        mRepo.release()
+
+        mIsInitialized = false
     }
 
     override fun copyFile(recordFile: RecordFile, destPath: String) {
@@ -146,14 +152,14 @@ internal class FileManager internal constructor(private val injector: FileManage
     }
 
     override fun onFileUpdate(
-        eventType: DvrService.IDvrLauncher.EventType,
-        type: DvrService.IDvrLauncher.FileType,
+        eventType: DvrLauncher.IFileManager.EventType,
+        type: DvrLauncher.IFileManager.FileType,
         file: File
     ) {
         Log.d("FileManager", "onFileUpdate: $eventType, $type, ${file.absolutePath}")
-        if (eventType == DvrService.IDvrLauncher.EventType.Close) {
+        if (eventType == DvrLauncher.IFileManager.EventType.Close) {
             when (type) {
-                DvrService.IDvrLauncher.FileType.Event -> {
+                DvrLauncher.IFileManager.FileType.Event -> {
                     mParser.parseEvent(file).run {
                         val currentFileBundle = mCurrentRecordFile[this.location] ?: return@run
                         val previousFileBundle = mRepo.files.filter { item ->
@@ -163,14 +169,14 @@ internal class FileManager internal constructor(private val injector: FileManage
                     }
                 }
 
-                DvrService.IDvrLauncher.FileType.Record -> {
+                DvrLauncher.IFileManager.FileType.Record -> {
                     val recordFileBundle: RecordFileBundle = mParser.parseRecord(file)
                     mRepo.add(recordFileBundle)
                     recordUpdateListener?.onUpdate()
                 }
             }
         } else {
-            if (type == DvrService.IDvrLauncher.FileType.Record) {
+            if (type == DvrLauncher.IFileManager.FileType.Record) {
                 val recordFileBundle: RecordFileBundle = mParser.parseRecord(file)
                 mCurrentRecordFile[recordFileBundle.location] = recordFileBundle
             }
@@ -181,19 +187,6 @@ internal class FileManager internal constructor(private val injector: FileManage
         val record  = mParser.parseEventRecord(file)
         mRepo.add(record)
         recordUpdateListener?.onUpdate()
-    }
-
-    private inline fun stateFlow(
-        expectState: FileManagerState,
-        newState: FileManagerState,
-        mainFunc: () -> Unit
-    ) {
-        if (mState != expectState)
-            throw FileManagerStateFlowException(mState, newState)
-
-        mainFunc()
-
-        mState = newState
     }
 
     private fun findFileOrThrow(file: RecordFile): RecordFileBundle = mRepo.get(file.hashCode())

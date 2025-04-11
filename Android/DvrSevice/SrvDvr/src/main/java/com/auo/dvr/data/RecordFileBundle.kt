@@ -1,4 +1,4 @@
-package com.auo.dvr.filemanager
+package com.auo.dvr.data
 
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.RecordType

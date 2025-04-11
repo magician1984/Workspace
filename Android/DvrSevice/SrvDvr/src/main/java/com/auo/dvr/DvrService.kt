@@ -7,77 +7,38 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.auo.dvr.filemanager.FileManagerBuilder
+import com.auo.dvr.data.UserIntent
 import com.auo.dvr.launcher.DvrLauncher
-import com.auo.dvr.launcher.UsbDetector
+import com.auo.dvr.launcher.detector.UsbDetector
+import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrException
 import com.auo.dvr_core.DvrState
 import com.auo.dvr_core.IDvrService
-import com.auo.dvr_core.RecordFile
 import java.io.File
 
 class DvrService : Service() {
     interface IDvrLauncher{
-        enum class FileType{
-            Event,
-            Record
+        fun interface OnServiceStateUpdateListener{
+            fun onStateUpdate(state: DvrState)
         }
 
-        enum class EventType{
-            Create,
-            Close
+        fun interface OnConfigureUpdateListener{
+            fun onConfigureUpdate(configure: DvrConfigure)
         }
-
-        interface OnRecordFileUpdateListener{
-            fun onFileUpdate(eventType:EventType, type: FileType, file: File)
-        }
-
-        interface OnServiceStateUpdateListener{
-            fun onStateUpdate(state: DvrServiceState)
-        }
-
-        val serviceState : DvrServiceState
-
-        var onRecordFileUpdateListener : OnRecordFileUpdateListener?
 
         var onServiceStateUpdateListener : OnServiceStateUpdateListener?
 
-        fun start()
+        var onConfigureUpdateListener : OnConfigureUpdateListener?
 
-        fun stop()
-    }
+        fun<R> handleUserIntent(intent : UserIntent<R>) : R
 
-    interface IFileManager : IDvrLauncher.OnRecordFileUpdateListener {
-        interface Builder{
-            fun build() : IFileManager
-        }
-
-        fun interface RecordUpdateListener{
-            fun onUpdate()
-        }
-
-        var recordUpdateListener: RecordUpdateListener?
-
-        val recordFiles : List<RecordFile>
-
-        fun init()
         fun release()
-
-        // Blocking call
-        fun copyFile(recordFile: RecordFile, destPath: String)
-
-        fun deleteFile(recordFile: RecordFile)
-        fun lockFile(recordFile: RecordFile)
-        fun unlockFile(recordFile: RecordFile)
-        fun forceClone()
     }
 
-    abstract class IServiceApi : IDvrService.Stub(){
-        abstract var fileManager: IFileManager?
+
+    abstract class IServiceApi(protected val mDvrLauncher: IDvrLauncher) : IDvrService.Stub(){
         abstract fun updateState(state: DvrState)
     }
-
-    private var mFileManager : IFileManager? = null
 
     private lateinit var mServiceApi: IServiceApi
 
@@ -93,41 +54,10 @@ class DvrService : Service() {
             if(!sourceFolder.exists())
                 sourceFolder.mkdirs()
 
-            mDvrLauncher = DvrLauncher(sourceFolder, UsbDetector(this))
+            mDvrLauncher = DvrLauncher(this, sourceFolder, UsbDetector(this))
 
-            if(mDvrLauncher.serviceState.available){
-                mFileManager = FileManagerBuilder()
-                    .setTargetRoot(mDvrLauncher.serviceState.destinationFolder!!)
-                    .setEventCacheRoot(this.cacheDir)
-                    .build()
 
-                mFileManager!!.init()
-            }
-
-            mDvrLauncher.onRecordFileUpdateListener = mFileManager
-
-            mServiceApi = ServiceApiImpl()
-
-            mServiceApi.fileManager = mFileManager
-
-            mDvrLauncher.onServiceStateUpdateListener = object : IDvrLauncher.OnServiceStateUpdateListener{
-                override fun onStateUpdate(state: DvrServiceState) {
-                    Log.d("DvrService", "onStateUpdate: $state")
-                    if(state.available){
-                        mFileManager = FileManagerBuilder()
-                            .setTargetRoot(mDvrLauncher.serviceState.destinationFolder!!)
-                            .setEventCacheRoot(this@DvrService.cacheDir)
-                            .build()
-                        mFileManager!!.init()
-                    }else{
-                        mFileManager?.release()
-                        mFileManager = null
-                    }
-                    mServiceApi.fileManager = mFileManager
-                }
-            }
-
-            mDvrLauncher.start()
+            mServiceApi = ServiceApiImpl(mDvrLauncher)
 
             isInitialized = true
 
@@ -157,9 +87,7 @@ class DvrService : Service() {
     }
 
     override fun onDestroy() {
-        mDvrLauncher.stop()
-
-        mFileManager?.release()
+        mDvrLauncher.release()
 
         super.onDestroy()
     }

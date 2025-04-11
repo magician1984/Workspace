@@ -1,18 +1,15 @@
-package com.auo.dvr.launcher
+package com.auo.dvr.launcher.detector
 
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.hardware.usb.UsbManager
 import android.os.Environment
 import android.os.storage.StorageManager
 import android.os.storage.StorageVolume
 import android.util.Log
+import com.auo.dvr.launcher.DvrLauncher
 import java.io.File
 import java.util.concurrent.Executors
 
-class UsbDetector(private val mContext: Context) : DvrLauncher.IDeviceDetect, BroadcastReceiver() {
+class UsbDetector(mContext: Context) : DvrLauncher.IDeviceDetect {
     companion object{
         private const val USB_MOUNT_FOLDER = "/mnt/media_rw"
     }
@@ -27,13 +24,6 @@ class UsbDetector(private val mContext: Context) : DvrLauncher.IDeviceDetect, Br
     private val mStorageManager : StorageManager = mContext.getSystemService(Context.STORAGE_SERVICE) as StorageManager
 
     init {
-        //Register USB and unmount broadcast receiver
-        val filter : IntentFilter = IntentFilter().apply {
-            addAction(Intent.ACTION_MEDIA_MOUNTED)
-            addAction(Intent.ACTION_MEDIA_UNMOUNTED)
-        }
-        mContext.registerReceiver(this, filter)
-
         val uuid : String? = mStorageManager.storageVolumes.find { it.isRemovable }?.uuid
 
         if(uuid != null)
@@ -65,7 +55,8 @@ class UsbDetector(private val mContext: Context) : DvrLauncher.IDeviceDetect, Br
         mCallback = callback
     }
 
-    override fun onReceive(context: Context?, intent: Intent?) {
-        TODO("Not yet implemented")
+    override fun unmount() {
+        val folder : File = _mountedFolder ?: return
+        StorageManager::class.java.getMethod("unmount", String::class.java).invoke(mStorageManager, folder.name)
     }
 }

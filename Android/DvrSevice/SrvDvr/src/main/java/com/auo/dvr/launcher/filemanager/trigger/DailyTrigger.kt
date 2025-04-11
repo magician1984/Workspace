@@ -1,8 +1,8 @@
-package com.auo.dvr.filemanager.trigger
+package com.auo.dvr.launcher.filemanager.trigger
 
 import android.icu.util.Calendar
-import com.auo.dvr.filemanager.FileManager
-import com.auo.dvr.filemanager.RecordFileBundle
+import com.auo.dvr.launcher.filemanager.FileManager
+import com.auo.dvr.data.RecordFileBundle
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit

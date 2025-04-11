@@ -1,10 +1,10 @@
-package com.auo.dvr.filemanager.repo
+package com.auo.dvr.launcher.filemanager.repo
 
 import android.util.Log
-import com.auo.dvr.filemanager.FileInfo
-import com.auo.dvr.filemanager.FileManager
-import com.auo.dvr.filemanager.FileManagerException
-import com.auo.dvr.filemanager.RecordFileBundle
+import com.auo.dvr.launcher.filemanager.FileInfo
+import com.auo.dvr.launcher.filemanager.FileManager
+import com.auo.dvr.launcher.filemanager.FileManagerException
+import com.auo.dvr.data.RecordFileBundle
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.RecordType
 import java.io.File

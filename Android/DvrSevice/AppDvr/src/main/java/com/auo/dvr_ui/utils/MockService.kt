@@ -8,6 +8,7 @@ import com.auo.dvr_core.IDvrService
 import com.auo.dvr_core.OnConfigureUpdateListener
 import com.auo.dvr_core.OnRecordUpdateListener
 import com.auo.dvr_core.OnStateUpdateListener
+import com.auo.dvr_core.RecordDuration
 import com.auo.dvr_core.RecordFile
 import com.auo.dvr_core.RecordType
 import java.io.File
@@ -19,7 +20,13 @@ class MockService(private val context: Context) : IDvrService.Stub() {
 
     private val mStateListeners = mutableListOf<OnStateUpdateListener>()
 
+    private val mConfigureListeners = mutableListOf<OnConfigureUpdateListener>()
+
     private var mState = DvrState(true, DvrState.ErrorType.None)
+
+    private var isMounted = true
+
+    private var mConfigure : DvrConfigure = DvrConfigure(RecordDuration.FiveMin)
 
     init {
         //random generate 200 record files. filename is {timestamp}.mp4
@@ -37,12 +44,16 @@ class MockService(private val context: Context) : IDvrService.Stub() {
     }
 
     override fun getRecordFiles(): MutableList<RecordFile> {
-        return mRecordFiles
+        return if(isMounted) mRecordFiles else mutableListOf()
     }
 
     override fun getState(): DvrState = mState
-    override fun getConfigure(): DvrConfigure {
-        TODO("Not yet implemented")
+    override fun getConfigure(): DvrConfigure = mConfigure
+
+    override fun updataConfigure(configure: DvrConfigure){
+        Thread.sleep(1000)
+        mConfigure = configure
+        mConfigureListeners.forEach { it.onUpdate() }
     }
 
     override fun lockFile(recordFile: RecordFile) {
@@ -78,16 +89,12 @@ class MockService(private val context: Context) : IDvrService.Stub() {
     override fun unregisterListener(listener: OnRecordUpdateListener?) : Unit = if(!mListeners.remove(listener)) throw Exception("Listener not registered") else Unit
     override fun registerStateListener(listener: OnStateUpdateListener) : Unit = if(!mStateListeners.add(listener)) throw Exception("Listener already registered") else Unit
     override fun unregisterStateListener(listener: OnStateUpdateListener) : Unit = if(!mStateListeners.remove(listener)) throw Exception("Listener not registered") else Unit
-    override fun registerConfigureListener(listener: OnConfigureUpdateListener?) {
-        TODO("Not yet implemented")
-    }
-
-    override fun unregisterConfigureListener(listener: OnConfigureUpdateListener?) {
-        TODO("Not yet implemented")
-    }
+    override fun registerConfigureListener(listener: OnConfigureUpdateListener?) : Unit = if(!mConfigureListeners.add(listener!!)) throw Exception("Listener already registered") else Unit
+    override fun unregisterConfigureListener(listener: OnConfigureUpdateListener?) : Unit = if(!mConfigureListeners.remove(listener!!)) throw Exception("Listener not registered") else Unit
 
     override fun unmountFlash() {
-        TODO("Not yet implemented")
+        Thread.sleep(5000)
+        isMounted = false
     }
 
     override fun forceClone() {

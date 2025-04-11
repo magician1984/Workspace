@@ -1,4 +1,4 @@
-package com.auo.dvr.filemanager
+package com.auo.dvr.launcher.filemanager
 
 internal data class FileManagerInjector(
     val parser: FileManager.IFileParser,

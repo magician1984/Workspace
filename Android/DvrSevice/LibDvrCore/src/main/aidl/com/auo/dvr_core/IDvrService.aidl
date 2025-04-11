@@ -15,6 +15,8 @@ interface IDvrService {
     DvrState getState();
     DvrConfigure getConfigure();
 
+    void updataConfigure(in DvrConfigure configure);
+
     void lockFile(in RecordFile recordFile);
     void unlockFile(in RecordFile recordFile);
 

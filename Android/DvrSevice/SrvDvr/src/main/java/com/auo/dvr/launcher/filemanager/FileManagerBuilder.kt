@@ -1,15 +1,16 @@
-package com.auo.dvr.filemanager
+package com.auo.dvr.launcher.filemanager
 
 import android.os.Environment
 import com.auo.dvr.DvrService
-import com.auo.dvr.filemanager.event.EventHandler
-import com.auo.dvr.filemanager.operator.OperatorMethods
-import com.auo.dvr.filemanager.parser.FileParser
-import com.auo.dvr.filemanager.repo.BufferedRepo
-import com.auo.dvr.filemanager.trigger.DailyTrigger
+import com.auo.dvr.launcher.DvrLauncher
+import com.auo.dvr.launcher.filemanager.event.EventHandler
+import com.auo.dvr.launcher.filemanager.operator.OperatorMethods
+import com.auo.dvr.launcher.filemanager.parser.FileParser
+import com.auo.dvr.launcher.filemanager.repo.BufferedRepo
+import com.auo.dvr.launcher.filemanager.trigger.DailyTrigger
 import java.io.File
 
-class FileManagerBuilder : DvrService.IFileManager.Builder {
+internal class FileManagerBuilder : DvrLauncher.IFileManager.Builder {
 
     private var targetRoot: File = Environment.getDataDirectory()
 
@@ -20,7 +21,7 @@ class FileManagerBuilder : DvrService.IFileManager.Builder {
     fun setEventCacheRoot(eventCacheRoot: File) =
         this.apply { this.eventCacheRoot = eventCacheRoot }
 
-    override fun build(): DvrService.IFileManager {
+    override fun build(): DvrLauncher.IFileManager {
         // Check and Create target root
 
         val operatorMethods = OperatorMethods()

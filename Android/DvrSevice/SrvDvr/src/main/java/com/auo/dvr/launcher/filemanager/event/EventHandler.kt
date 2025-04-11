@@ -1,17 +1,14 @@
-package com.auo.dvr.filemanager.event
+package com.auo.dvr.launcher.filemanager.event
 
 import android.util.Log
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegSession
-import com.auo.dvr.filemanager.EventInfo
-import com.auo.dvr.filemanager.FileManager
-import com.auo.dvr.filemanager.RecordFileBundle
+import com.auo.dvr.launcher.filemanager.EventInfo
+import com.auo.dvr.launcher.filemanager.FileManager
+import com.auo.dvr.data.RecordFileBundle
 import com.auo.dvr_core.CamLocation
 import java.io.File
-import java.util.concurrent.Callable
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
-import java.util.concurrent.atomic.AtomicBoolean
 
 internal class EventHandler(private val mTmpFolder: File) : FileManager.IEventHandler {
     companion object{

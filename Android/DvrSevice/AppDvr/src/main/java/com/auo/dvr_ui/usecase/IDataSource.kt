@@ -1,5 +1,6 @@
 package com.auo.dvr_ui.usecase
 
+import com.auo.dvr_core.RecordDuration
 import com.auo.dvr_ui.entity.DvrStateData
 import com.auo.dvr_ui.entity.RecordFileData
 import java.io.File
@@ -22,4 +23,6 @@ interface IDataSource {
     fun unlockRecord(record: RecordFileData)
     fun deleteRecord(record: RecordFileData)
     fun getCacheFile(record: RecordFileData) : File
+    fun unmountStorage()
+    fun updateRecordDuration(duration : RecordDuration)
 }
