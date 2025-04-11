@@ -5,6 +5,7 @@ import android.os.FileObserver
 import android.util.Log
 import com.auo.dvr.DvrService.IDvrLauncher
 import com.auo.dvr.data.UserIntent
+import com.auo.dvr.launcher.DvrLauncher.IFileManager.EventType
 import com.auo.dvr.launcher.filemanager.FileManagerBuilder
 import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrState
@@ -15,38 +16,40 @@ import java.io.File
 internal class DvrLauncher(
     private val mContext: Context,
     private val mSharedPartitionFolder: File,
-    private val mDeviceDetect: IDeviceDetect
+    private val mDeviceDetect: IDeviceDetect,
+    private val mConfigureUpdater: IConfigureUpdater
 ) : IDvrLauncher {
     companion object {
         private const val EVENT_FILE_EXTENSION = "evt"
         private const val WORKAROUND_FILE_EXTENSION = "h265"
         private const val RECORD_FILE_EXTENSION = "mp4"
+        private const val CONFIG_FILE_EXTENSION = "cfg"
 
         private const val TARGET_FOLDER_NAME = "Dvr_dst"
     }
 
     interface IFileManager {
-        enum class FileType{
+        enum class FileType {
             Event,
             Record
         }
 
-        enum class EventType{
+        enum class EventType {
             Create,
             Close
         }
 
-        interface Builder{
-            fun build() : IFileManager
+        interface Builder {
+            fun build(): IFileManager
         }
 
-        fun interface RecordUpdateListener{
+        fun interface RecordUpdateListener {
             fun onUpdate()
         }
 
         var recordUpdateListener: RecordUpdateListener?
 
-        val recordFiles : List<RecordFile>
+        val recordFiles: List<RecordFile>
 
         fun init()
         fun release()
@@ -67,6 +70,13 @@ internal class DvrLauncher(
         fun unmount()
     }
 
+    internal interface IConfigureUpdater {
+        val configure: DvrConfigure?
+        fun updateConfigure(configure: DvrConfigure)
+        fun onConfigureUpdate(callback: (DvrConfigure) -> Unit)
+        fun onConfigureFileUpdate(eventType: EventType, file: File)
+    }
+
     override var onServiceStateUpdateListener: IDvrLauncher.OnServiceStateUpdateListener? = null
     override var onConfigureUpdateListener: IDvrLauncher.OnConfigureUpdateListener? = null
 
@@ -84,7 +94,7 @@ internal class DvrLauncher(
 
     private val mWorkaround: Workaround = Workaround()
 
-    private var mFileManager : IFileManager? = null
+    private var mFileManager: IFileManager? = null
 
     private val mFileObserver: FileObserver =
         object : FileObserver(mSharedPartitionFolder.absolutePath, CLOSE_WRITE or CREATE) {
@@ -112,24 +122,20 @@ internal class DvrLauncher(
                         eventType,
                         File(mSharedPartitionFolder, path)
                     )
+
+                    CONFIG_FILE_EXTENSION -> mConfigureUpdater.onConfigureFileUpdate(
+                        eventType,
+                        File(mSharedPartitionFolder, path)
+                    )
                 }
             }
         }
 
     init {
-        val file: File? = if(mDeviceDetect.mountedFolder != null){
-            File(mDeviceDetect.mountedFolder, TARGET_FOLDER_NAME).apply { if(!exists()) mkdirs() }
-        }else{
-            null
-        }
 
-        val isAvailable = file != null
+        systemCheck()
 
-        mServiceState = DvrState(isAvailable = isAvailable, errorType = if(isAvailable) DvrState.ErrorType.None else DvrState.ErrorType.FlashDriveNotAvailable)
-
-        mDeviceDetect.onFlashDiskMountStateUpdate(::onFlashDiskMountStateUpdate)
-
-        onFlashDiskMountStateUpdate(isAvailable)
+        mDeviceDetect.onFlashDiskMountStateUpdate { onFlashDiskMountStateUpdate(it) }
 
         Log.d(
             "DvrLauncher",
@@ -138,7 +144,7 @@ internal class DvrLauncher(
     }
 
     override fun <R> handleUserIntent(intent: UserIntent<R>): R {
-        val result = when(intent){
+        val result = when (intent) {
             is UserIntent.CopyRecord -> mFileManager?.copyFile(intent.recordFile, intent.destPath)
             is UserIntent.DeleteRecord -> mFileManager?.deleteFile(intent.recordFile)
             UserIntent.GetRecordFiles -> mFileManager?.recordFiles ?: emptyList<RecordFile>()
@@ -162,17 +168,18 @@ internal class DvrLauncher(
     private fun onFlashDiskMountStateUpdate(isMounted: Boolean) {
         mFileManager?.release()
 
-        mFileManager = if(isMounted){
-            FileManagerBuilder().setTargetRoot(mDeviceDetect.mountedFolder!!).setEventCacheRoot(mContext.cacheDir).build()
-        }else{
+        mFileManager = if (isMounted) {
+            FileManagerBuilder().setTargetRoot(mDeviceDetect.mountedFolder!!)
+                .setEventCacheRoot(mContext.cacheDir).build()
+        } else {
             null
         }
 
         mFileManager?.init()
     }
 
-    private fun updateConfigure(configure: DvrConfigure){
-        TODO()
+    private fun updateConfigure(configure: DvrConfigure) {
+        mConfigureUpdater.updateConfigure(configure)
     }
 
     // Workaround: Provider can not generate mp4 file, so we need to convert h265 to mp4
@@ -180,5 +187,13 @@ internal class DvrLauncher(
         if (eventType != IFileManager.EventType.Create)
             return
         mWorkaround.process(file)
+    }
+
+    private fun systemCheck() {
+        val file: File? = if (mDeviceDetect.mountedFolder != null) {
+            File(mDeviceDetect.mountedFolder, TARGET_FOLDER_NAME).apply { if (!exists()) mkdirs() }
+        } else {
+            null
+        }
     }
 }

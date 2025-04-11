@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.auo.dvr.data.UserIntent
 import com.auo.dvr.launcher.DvrLauncher
+import com.auo.dvr.launcher.configure.ConfigureUpdater
 import com.auo.dvr.launcher.detector.UsbDetector
 import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrException
@@ -54,7 +55,7 @@ class DvrService : Service() {
             if(!sourceFolder.exists())
                 sourceFolder.mkdirs()
 
-            mDvrLauncher = DvrLauncher(this, sourceFolder, UsbDetector(this))
+            mDvrLauncher = DvrLauncher(this, sourceFolder, UsbDetector(this), ConfigureUpdater(sourceFolder))
 
 
             mServiceApi = ServiceApiImpl(mDvrLauncher)
