@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -60,7 +61,9 @@ class MainActivity : ComponentActivity() {
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                 mLock.lock()
                 try {
+                    Log.d("MainActivity", "onServiceConnected:")
                     mService = IDvrService.Stub.asInterface(service)
+                    Log.d("MainActivity", "onServiceConnected: service ready")
                     serviceReadyCondition.signal()
                 } finally {
                     mLock.unlock()
@@ -71,6 +74,8 @@ class MainActivity : ComponentActivity() {
                 TODO("Not yet implemented")
             }
         }, BIND_AUTO_CREATE)
+
+
 
 //        mService = MockService(this)
     }
@@ -85,14 +90,17 @@ class MainActivity : ComponentActivity() {
         val initializeThread = Executors.newSingleThreadExecutor()
 
         initializeThread.submit{
+            Log.d("MainActivity", "initializeDataSource: waiting for service ready")
             if(!::mService.isInitialized){
                 mLock.lock()
                 serviceReadyCondition.await()
                 mLock.unlock()
             }
+            Log.d("MainActivity", "initializeDataSource: service ready")
 
             mDataSource = Datasource(this, mService, cacheDir)
 
+            Log.d("MainActivity", "initializeDataSource: datasource ready")
             mPresenter.summit(
                 UseCaseGetListFiles(mDataSource),
                 UseCaseRegisterListener(mDataSource),
@@ -104,6 +112,7 @@ class MainActivity : ComponentActivity() {
                 UseCaseRegisterDvrStateListener(mDataSource)
             )
 
+            Log.d("MainActivity", "initializeDataSource: presenter ready")
             runOnUiThread {
                 mPresenter.onReady()
             }

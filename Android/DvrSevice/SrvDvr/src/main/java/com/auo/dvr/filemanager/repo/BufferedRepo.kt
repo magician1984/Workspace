@@ -10,7 +10,8 @@ import com.auo.dvr_core.RecordType
 import java.io.File
 
 internal class BufferedRepo(override val root: File,
-                            override val operator: FileManager.IOperatorMethods
+                            override val operator: FileManager.IOperatorMethods,
+                            override val reverseParser: FileManager.IReverseParser
 ) : FileManager.IRepo {
     companion object {
         private const val LOCK_FOLDER_NAME = "Locked"
@@ -23,6 +24,8 @@ internal class BufferedRepo(override val root: File,
     private val _files : MutableList<RecordFileBundle> = mutableListOf()
 
     override fun init() {
+        Log.d("BufferedRepo", "init: ${root.absolutePath}")
+
         if (!root.exists())
             root.mkdirs()
 
@@ -30,15 +33,32 @@ internal class BufferedRepo(override val root: File,
             val folder = File(root, it.name)
             if (!folder.exists())
                 folder.mkdirs()
+            else{
+                folder.listFiles()?.forEach { file ->
+                    if(!file.isDirectory) _files.add(reverseParser.reverseParse(file, it, RecordType.Normal))
+                }
+            }
 
             val lockFolder = File(folder, LOCK_FOLDER_NAME)
             if (!lockFolder.exists())
                 lockFolder.mkdirs()
+            else{
+                lockFolder.listFiles()?.forEach { file ->
+                    if(!file.isDirectory) _files.add(reverseParser.reverseParse(file, it, RecordType.Locked))
+                }
+            }
 
             val protectedFolder = File(folder, PROTECTED_FOLDER_NAME)
             if (!protectedFolder.exists())
                 protectedFolder.mkdirs()
+            else{
+                protectedFolder.listFiles()?.forEach { file ->
+                    if(!file.isDirectory) _files.add(reverseParser.reverseParse(file, it, RecordType.Protected))
+                }
+            }
         }
+
+        _files.sortBy { it.createTime }
     }
 
 
@@ -120,6 +140,10 @@ internal class BufferedRepo(override val root: File,
         Log.d("BufferedRepo", "unlock: ${recordFile.file!!.absolutePath} -> ${fileInfo.file.absolutePath}")
 
         _files[index] = recordFile.copy(recordFile = recordFile.recordFile.copy(type = RecordType.Normal), info = fileInfo)
+    }
+
+    override fun export(file: RecordFileBundle, dest: File) {
+        TODO("Not yet implemented")
     }
 
     private inline fun <R> withCameraFolder(camLocation: CamLocation, func: (File) -> R): R {

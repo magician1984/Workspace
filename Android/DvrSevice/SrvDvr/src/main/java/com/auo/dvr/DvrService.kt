@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.auo.dvr.filemanager.FileManagerBuilder
 import com.auo.dvr.launcher.DvrLauncher
+import com.auo.dvr.launcher.UsbDetector
 import com.auo.dvr_core.DvrException
 import com.auo.dvr_core.DvrState
 import com.auo.dvr_core.IDvrService
@@ -86,24 +87,18 @@ class DvrService : Service() {
 
     override fun onCreate() {
         try{
-            //Workaround: Shared partition folder is not ready yet, use Downloads folder instead
+            Log.d("DvrService", "onCreate:")
             val sourceFolder = File(getExternalFilesDir(null), "Dvr_src")
 
             if(!sourceFolder.exists())
                 sourceFolder.mkdirs()
 
-            mDvrLauncher = DvrLauncher(sourceFolder, object : DvrLauncher.IDeviceDetect{
-                override val mountedFolder: File?
-                    get() = getExternalFilesDir(null)
-
-                override fun onFlashDiskMountStateUpdate(callback: (Boolean) -> Unit) {
-
-                }
-            })
+            mDvrLauncher = DvrLauncher(sourceFolder, UsbDetector(this))
 
             if(mDvrLauncher.serviceState.available){
                 mFileManager = FileManagerBuilder()
                     .setTargetRoot(mDvrLauncher.serviceState.destinationFolder!!)
+                    .setEventCacheRoot(this.cacheDir)
                     .build()
 
                 mFileManager!!.init()
@@ -117,9 +112,11 @@ class DvrService : Service() {
 
             mDvrLauncher.onServiceStateUpdateListener = object : IDvrLauncher.OnServiceStateUpdateListener{
                 override fun onStateUpdate(state: DvrServiceState) {
+                    Log.d("DvrService", "onStateUpdate: $state")
                     if(state.available){
                         mFileManager = FileManagerBuilder()
-                            .setTargetRoot(state.destinationFolder!!)
+                            .setTargetRoot(mDvrLauncher.serviceState.destinationFolder!!)
+                            .setEventCacheRoot(this@DvrService.cacheDir)
                             .build()
                         mFileManager!!.init()
                     }else{
@@ -133,6 +130,8 @@ class DvrService : Service() {
             mDvrLauncher.start()
 
             isInitialized = true
+
+            Log.d("DvrService", "onCreate: initialized")
         }catch (e : DvrException){
             Log.e("DvrService", "onCreate: ", e)
         }

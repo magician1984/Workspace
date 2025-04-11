@@ -5,12 +5,15 @@ import com.auo.dvr_core.RecordFile;
 import com.auo.dvr_core.OnRecordUpdateListener;
 import com.auo.dvr_core.OnStateUpdateListener;
 import com.auo.dvr_core.DvrState;
+import com.auo.dvr_core.OnConfigureUpdateListener;
+import com.auo.dvr_core.DvrConfigure;
 
 // Declare any non-default types here with import statements
 
 interface IDvrService {
     List<RecordFile> getRecordFiles();
     DvrState getState();
+    DvrConfigure getConfigure();
 
     void lockFile(in RecordFile recordFile);
     void unlockFile(in RecordFile recordFile);
@@ -24,6 +27,11 @@ interface IDvrService {
 
     void registerStateListener(in OnStateUpdateListener listener);
     void unregisterStateListener(in OnStateUpdateListener listener);
+
+    void registerConfigureListener(in OnConfigureUpdateListener listener);
+    void unregisterConfigureListener(in OnConfigureUpdateListener listener);
+
+    void unmountFlash();
 
     void forceClone();
 }

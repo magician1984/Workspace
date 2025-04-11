@@ -122,7 +122,14 @@ class Presenter(
         useCaseRegisterListener {
             backgroundScope.launch {
                 state =
-                    state.copy(fileList = mutableStateListOf<RecordFileData>().apply { addAll(it) })
+                    state.copy(fileList = mutableStateListOf<RecordFileData>().apply {
+                        addAll(it.filter {
+                            if (state.isProtected)
+                                it.type == RecordType.Protected
+                            else
+                                it.type != RecordType.Protected
+                        })
+                    })
             }
         }
 
@@ -139,8 +146,8 @@ class Presenter(
         drawContent {
 
             LaunchedEffect(key1 = LocalContext.current) {
-                val list = findUseCase<IUseCaseGetListFiles>()?.invoke()?.filter {item->
-                    if(state.isProtected) item.type == RecordType.Protected else item.type != RecordType.Protected
+                val list = findUseCase<IUseCaseGetListFiles>()?.invoke()?.filter { item ->
+                    if (state.isProtected) item.type == RecordType.Protected else item.type != RecordType.Protected
                 } ?: return@LaunchedEffect
                 val dvrState = findUseCase<IUseCaseGetDvrState>()?.invoke() ?: return@LaunchedEffect
                 val errorEffect = if (!dvrState.isAvailable) Effect.OnError(

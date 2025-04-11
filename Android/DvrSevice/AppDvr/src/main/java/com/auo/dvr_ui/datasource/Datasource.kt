@@ -1,6 +1,7 @@
 package com.auo.dvr_ui.datasource
 
 import android.content.Context
+import android.util.Log
 import com.auo.dvr_core.DvrState
 import com.auo.dvr_core.IDvrService
 import com.auo.dvr_core.OnRecordUpdateListener
@@ -32,6 +33,7 @@ class Datasource(
         errorMessages[DvrState.ErrorType.FlashDriveNotAvailable] = "Flash drive is not available"
         errorMessages[DvrState.ErrorType.InternalError] = "Internal error"
 
+        Log.d("Datasource", "register listener")
         service.registerListener(object : OnRecordUpdateListener.Stub() {
             override fun onUpdate() {
                 val records = getAllRecords()
@@ -39,6 +41,7 @@ class Datasource(
             }
         })
 
+        Log.d("Datasource", "register state listener")
         service.registerStateListener(object : OnStateUpdateListener.Stub() {
             override fun onStateUpdate() {
                 updateDvrState()
@@ -86,13 +89,22 @@ class Datasource(
     }
 
     private fun updateDvrState() {
+        Log.d("Datasource", "updateDvrState:")
         val state = service.state
 
-        //TODO: Implement error message
+        Log.d("Datasource", "updateDvrState: state: $state")
         val message: String = errorMessages.getOrDefault(state.errorType, "")
 
+        Log.d("Datasource", "updateDvrState: message: $message")
         _dvrState = DvrStateData(state, message)
+
+        Log.d("Datasource", "updateDvrState: listeners: ${mStateListeners.size}")
         mStateListeners.forEach { it.onUpdate(dvrState) }
+
+        if(state.isAvailable){
+            val records = getAllRecords()
+            mListeners.forEach { it.onUpdate(records) }
+        }
     }
 
     private inline fun <R> withServiceAvailable(

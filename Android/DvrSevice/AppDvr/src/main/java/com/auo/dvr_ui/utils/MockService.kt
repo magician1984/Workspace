@@ -2,8 +2,10 @@ package com.auo.dvr_ui.utils
 
 import android.content.Context
 import com.auo.dvr_core.CamLocation
+import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrState
 import com.auo.dvr_core.IDvrService
+import com.auo.dvr_core.OnConfigureUpdateListener
 import com.auo.dvr_core.OnRecordUpdateListener
 import com.auo.dvr_core.OnStateUpdateListener
 import com.auo.dvr_core.RecordFile
@@ -39,6 +41,9 @@ class MockService(private val context: Context) : IDvrService.Stub() {
     }
 
     override fun getState(): DvrState = mState
+    override fun getConfigure(): DvrConfigure {
+        TODO("Not yet implemented")
+    }
 
     override fun lockFile(recordFile: RecordFile) {
         runWithUpdateNotify {
@@ -73,6 +78,17 @@ class MockService(private val context: Context) : IDvrService.Stub() {
     override fun unregisterListener(listener: OnRecordUpdateListener?) : Unit = if(!mListeners.remove(listener)) throw Exception("Listener not registered") else Unit
     override fun registerStateListener(listener: OnStateUpdateListener) : Unit = if(!mStateListeners.add(listener)) throw Exception("Listener already registered") else Unit
     override fun unregisterStateListener(listener: OnStateUpdateListener) : Unit = if(!mStateListeners.remove(listener)) throw Exception("Listener not registered") else Unit
+    override fun registerConfigureListener(listener: OnConfigureUpdateListener?) {
+        TODO("Not yet implemented")
+    }
+
+    override fun unregisterConfigureListener(listener: OnConfigureUpdateListener?) {
+        TODO("Not yet implemented")
+    }
+
+    override fun unmountFlash() {
+        TODO("Not yet implemented")
+    }
 
     override fun forceClone() {
 

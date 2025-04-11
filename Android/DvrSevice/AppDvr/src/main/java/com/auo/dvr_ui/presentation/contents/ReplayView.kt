@@ -35,6 +35,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.Player.Listener
 import androidx.media3.exoplayer.ExoPlayer
+import com.auo.dvr_core.RecordType
 import com.auo.dvr_ui.R
 import com.auo.dvr_ui.presentation.IUserIntents
 import com.auo.dvr_ui.presentation.Presenter
@@ -45,9 +46,12 @@ import java.util.Date
 import java.util.Locale
 
 internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Presenter.IView {
-    companion object{
-        private const val TIME_FORMAT = "HH:mm:ss"
+    companion object {
+        private const val TIME_FORMAT = "mm:ss"
+        private const val NORMAL_DURATION_MILLI: Long = 5 * 60 * 1000
+        private const val EVENT_DURATION_MILLI: Long = 90 * 1000
     }
+
     private sealed class ControlIntent {
         data object Play : ControlIntent()
         data object Pause : ControlIntent()
@@ -79,7 +83,7 @@ internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Prese
 
     private var mPlayer: Player? = null
 
-    private val dateFormat : SimpleDateFormat = SimpleDateFormat(TIME_FORMAT, Locale.getDefault())
+    private val dateFormat: SimpleDateFormat = SimpleDateFormat(TIME_FORMAT, Locale.getDefault())
 
     @Composable
     override fun Draw(
@@ -97,7 +101,7 @@ internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Prese
                     mReplayState = mReplayState.copy(
                         playingFile = mRecord.cacheFile,
                         isPause = false,
-                        duration = 0L
+                        duration = if (mRecord.type == RecordType.Protected) EVENT_DURATION_MILLI else NORMAL_DURATION_MILLI
                     )
                     if (mReplayState.isLoading)
                         handleIntent(ControlIntent.Play)
@@ -137,21 +141,23 @@ internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Prese
     private fun VideoView(modifier: Modifier) {
         AndroidView(modifier = modifier, factory = { context ->
             SurfaceView(context).apply {
+                val view = this
                 mPlayer = ExoPlayer.Builder(context).build()
                 mPlayer!!.setVideoSurfaceView(this)
                 mPlayer!!.addListener(object : Listener {
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
                         super.onIsPlayingChanged(isPlaying)
+                        Log.d("ReplayView", "onIsPlayingChanged: $isPlaying")
                         mReplayState = mReplayState.copy(isPlaying = isPlaying)
                     }
 
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         super.onPlaybackStateChanged(playbackState)
-                        if (playbackState == Player.STATE_READY) {
-                            Log.d("ReplayView", "onPlaybackStateChanged: READY")
-                            val duration = mPlayer!!.duration
-                            mReplayState = mReplayState.copy(duration = duration)
+                        Log.d("ReplayView", "onPlaybackStateChanged: $playbackState")
+                        if(playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED){
+                            mReplayState = mReplayState.copy(isPlaying = false, isPause = false)
                         }
+
                     }
                 })
             }
@@ -190,12 +196,12 @@ internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Prese
                 delay(300)
                 currentTime = mPlayer?.currentPosition ?: 0L
             }
-            if(!mReplayState.isPause)
+            if (!mReplayState.isPause)
                 currentTime = 0L
         }
 
         LaunchedEffect(key1 = mPlayer?.playbackState) {
-            if(mPlayer?.playbackState == Player.STATE_ENDED)
+            if (mPlayer?.playbackState == Player.STATE_ENDED)
                 currentTime = 0L
         }
 
@@ -205,7 +211,7 @@ internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Prese
             Slider(
                 modifier = Modifier,
                 value = currentTime.toFloat(),
-                valueRange = 0f..duration.toFloat(),
+                valueRange = 0f..duration.toFloat().coerceAtLeast(0f),
                 onValueChange = {
                     onEvent(ControlIntent.SeekTo(it.toLong()))
                 })
@@ -282,6 +288,7 @@ internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Prese
         val mediaItem: MediaItem = MediaItem.fromUri(Uri.fromFile(file))
         player.setMediaItem(mediaItem)
         player.prepare()
+        Log.d("ReplayView", "Duration : ${player.duration}")
         player.play()
     }
 }

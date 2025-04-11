@@ -34,12 +34,13 @@ class Workaround {
             )
 
             val command = listOf(
-                "-re",
-                "-f", "hevc",
-                "-i", file.absolutePath,
-                "-c", "copy",
+                "-re",                           // read input in real time (simulates device)
+                "-f", "hevc",                    // raw H.265 stream
+                "-i", file.absolutePath,         // input file
+                "-c:v", "copy",                  // no re-encoding
+                "-movflags", "+frag_keyframe+empty_moov+default_base_moof+faststart",
                 outputFile.absolutePath
-            ).joinToString(" ") { "\"$it\"" } // wrap in quotes for safety
+            ).joinToString(" ") { "\"$it\"" }
 
             Log.d("Workaround", "FFmpeg command: $command")
 

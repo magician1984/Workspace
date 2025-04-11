@@ -65,13 +65,13 @@ internal class DvrLauncher(
         }
 
     init {
-        _serviceState = DvrServiceState(
-            if (deviceDetect.mountedFolder != null)
-                File(deviceDetect.mountedFolder, TARGET_FOLDER_NAME)
-            else
-                null
-            , deviceDetect.mountedFolder != null
-        )
+        val file: File? = if(deviceDetect.mountedFolder != null){
+            File(deviceDetect.mountedFolder, TARGET_FOLDER_NAME).apply { if(!exists()) mkdirs() }
+        }else{
+            null
+        }
+
+        _serviceState = DvrServiceState(file, file != null)
 
         deviceDetect.onFlashDiskMountStateUpdate(::onFlashDiskMountStateUpdate)
 
@@ -94,10 +94,9 @@ internal class DvrLauncher(
 
     private fun onFlashDiskMountStateUpdate(isMounted: Boolean) {
         if (isMounted) {
-            _serviceState = DvrServiceState(
-                File(deviceDetect.mountedFolder, TARGET_FOLDER_NAME),
-                true
-            )
+            val file: File =  File(deviceDetect.mountedFolder, TARGET_FOLDER_NAME).apply { if(!exists()) mkdirs() }
+
+            _serviceState = DvrServiceState(file, true)
             mFileObserver.stopWatching()
         } else {
             _serviceState = DvrServiceState(null, false)

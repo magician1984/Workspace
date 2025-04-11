@@ -15,7 +15,7 @@ import java.io.File
  * Parser the filename to create RecordFileInstance
  * Filename format: {Location_id}_{CreateTime}.{Extension}
  */
-internal class FileParser : FileManager.IFileParser {
+internal class FileParser : FileManager.IFileParser, FileManager.IReverseParser {
     private data class InfoBundle(val location: CamLocation, val createTime: Long)
 
     override fun parseEvent(file: File): RecordFileBundle {
@@ -24,6 +24,17 @@ internal class FileParser : FileManager.IFileParser {
         val recordFile = RecordFile(file.name, createTime, location, RecordType.Unknown)
 
         return RecordFileBundle(recordFile, EventInfo(createTime, 0))
+    }
+
+    override fun parseEventRecord(file: File): RecordFileBundle {
+        Log.d("FileParser", "parseEventRecord: ${file.absolutePath}")
+
+        val (location, createTime) = parseFileName(file.name)
+
+        val recordFile = RecordFile(file.name.substringAfterLast('_'), createTime, location, RecordType.Protected)
+
+        Log.d("FileParser", "parseEventRecord: $recordFile")
+        return RecordFileBundle(recordFile, FileInfo(file))
     }
 
     override fun parseRecord(file: File): RecordFileBundle {
@@ -45,4 +56,15 @@ internal class FileParser : FileManager.IFileParser {
     }
 
     private class FileParserException(file : File) : FileManagerException("[Parser] Parse failed(${file.absolutePath})")
+
+    override fun reverseParse(
+        file: File,
+        location: CamLocation,
+        type: RecordType
+    ): RecordFileBundle {
+        val filename = file.name
+        val createTime = filename.substringBeforeLast('.').toLong()
+        val recordFile = RecordFile(filename, createTime, location, type)
+        return RecordFileBundle(recordFile, FileInfo(file))
+    }
 }
