@@ -2,10 +2,13 @@ package com.auo.dvr_ui.datasource
 
 import android.content.Context
 import android.util.Log
+import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrState
 import com.auo.dvr_core.IDvrService
 import com.auo.dvr_core.OnRecordUpdateListener
 import com.auo.dvr_core.OnStateUpdateListener
+import com.auo.dvr_core.RecordDuration
+import com.auo.dvr_core.RecordResolution
 import com.auo.dvr_ui.entity.DvrStateData
 import com.auo.dvr_ui.entity.RecordFileData
 import com.auo.dvr_ui.usecase.IDataSource
@@ -25,7 +28,7 @@ class Datasource(
     override val dvrState: DvrStateData
         get() = _dvrState
 
-    private val errorMessages : HashMap<DvrState.ErrorType, String> = hashMapOf()
+    private val errorMessages: HashMap<DvrState.ErrorType, String> = hashMapOf()
 
     init {
         //TODO: String for locale
@@ -71,11 +74,11 @@ class Datasource(
         service.lockFile(record.dto)
     }, onUnavailable = {})
 
-    override fun unlockRecord(record: RecordFileData) : Unit = withServiceAvailable(onAvailable = {
+    override fun unlockRecord(record: RecordFileData): Unit = withServiceAvailable(onAvailable = {
         service.unlockFile(record.dto)
     }, onUnavailable = {})
 
-    override fun deleteRecord(record: RecordFileData) : Unit = withServiceAvailable(onAvailable = {
+    override fun deleteRecord(record: RecordFileData): Unit = withServiceAvailable(onAvailable = {
         service.deleteFile(record.dto)
     }, onUnavailable = {})
 
@@ -87,6 +90,26 @@ class Datasource(
         }, onUnavailable = {})
         return cacheFile
     }
+
+    override fun unmountStorage(): Unit = withServiceAvailable(onAvailable = {
+        service.unmountFlash()
+    }, onUnavailable = {})
+
+    override fun updateConfigure(configure: DvrConfigure): Unit =
+        withServiceAvailable(onAvailable = {
+            service.updataConfigure(configure)
+        }, onUnavailable = {})
+
+    override fun getConfigure(): DvrConfigure = withServiceAvailable(
+        onAvailable = {
+            service.configure!!
+        },
+        onUnavailable = {
+            DvrConfigure(
+                duration = RecordDuration.FiveMin,
+                resolution = RecordResolution.FHD
+            )
+        })
 
     private fun updateDvrState() {
         Log.d("Datasource", "updateDvrState:")
@@ -101,7 +124,7 @@ class Datasource(
         Log.d("Datasource", "updateDvrState: listeners: ${mStateListeners.size}")
         mStateListeners.forEach { it.onUpdate(dvrState) }
 
-        if(state.isAvailable){
+        if (state.isAvailable) {
             val records = getAllRecords()
             mListeners.forEach { it.onUpdate(records) }
         }

@@ -1,5 +1,6 @@
 package com.auo.dvr_ui.entity
 
+import com.auo.dvr_core.DvrConfigure
 import java.io.File
 
 interface IUseCase
@@ -36,3 +37,14 @@ interface IUseCaseRegisterDvrStateListener : IUseCase{
     operator fun invoke(callback : (DvrStateData) -> Unit)
 }
 
+interface IUseCaseGetConfigure : IUseCase{
+    operator fun invoke() : DvrConfigure
+}
+
+interface IUseCaseSetConfigure : IUseCase{
+    operator fun invoke(configure : DvrConfigure)
+}
+
+interface IUseCaseUnmountStorage : IUseCase{
+    operator fun invoke()
+}

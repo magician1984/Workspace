@@ -4,6 +4,7 @@ import android.os.FileObserver
 import com.auo.dvr.launcher.DvrLauncher
 import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.RecordDuration
+import com.auo.dvr_core.RecordResolution
 import java.io.File
 
 internal class ConfigureUpdater(folder : File) : DvrLauncher.IConfigureUpdater {
@@ -49,7 +50,7 @@ internal class ConfigureUpdater(folder : File) : DvrLauncher.IConfigureUpdater {
         if(!file.exists()) return null
 
         val lines = file.readLines()
-        val configure = DvrConfigure(RecordDuration.entries.first { it.value == lines[0].toLong() })
+        val configure = DvrConfigure(RecordDuration.entries.first { it.value == lines[0].toLong() }, RecordResolution.entries.first { it.value == lines[1].toInt() })
 
         return configure
     }

@@ -18,12 +18,15 @@ import com.auo.dvr_ui.usecase.IDataSource
 import com.auo.dvr_ui.usecase.IPresenter
 import com.auo.dvr_ui.usecase.UseCaseDeleteFile
 import com.auo.dvr_ui.usecase.UseCaseGetCacheFile
+import com.auo.dvr_ui.usecase.UseCaseGetConfigure
 import com.auo.dvr_ui.usecase.UseCaseGetDvrState
 import com.auo.dvr_ui.usecase.UseCaseGetListFiles
 import com.auo.dvr_ui.usecase.UseCaseLockFile
 import com.auo.dvr_ui.usecase.UseCaseRegisterDvrStateListener
 import com.auo.dvr_ui.usecase.UseCaseRegisterListener
+import com.auo.dvr_ui.usecase.UseCaseSetConfigure
 import com.auo.dvr_ui.usecase.UseCaseUnlockFile
+import com.auo.dvr_ui.usecase.UseCaseUnmountStorage
 import com.auo.dvr_ui.utils.MockService
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -106,7 +109,10 @@ class MainActivity : ComponentActivity() {
                 UseCaseDeleteFile(mDataSource),
                 UseCaseGetCacheFile(mDataSource),
                 UseCaseGetDvrState(mDataSource),
-                UseCaseRegisterDvrStateListener(mDataSource)
+                UseCaseRegisterDvrStateListener(mDataSource),
+                UseCaseGetConfigure(mDataSource),
+                UseCaseSetConfigure(mDataSource),
+                UseCaseUnmountStorage(mDataSource)
             )
 
             Log.d("MainActivity", "initializeDataSource: presenter ready")

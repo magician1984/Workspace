@@ -9,6 +9,7 @@ import com.auo.dvr_core.OnRecordUpdateListener
 import com.auo.dvr_core.OnStateUpdateListener
 import com.auo.dvr_core.RecordDuration
 import com.auo.dvr_core.RecordFile
+import com.auo.dvr_core.RecordResolution
 
 class ServiceApiImpl(dvrLauncher: DvrService.IDvrLauncher) : DvrService.IServiceApi(dvrLauncher) {
     private val mRecordUpdateListeners: MutableList<OnRecordUpdateListener> = mutableListOf()
@@ -25,7 +26,7 @@ class ServiceApiImpl(dvrLauncher: DvrService.IDvrLauncher) : DvrService.IService
             }
         }
 
-    private var mConfigure: DvrConfigure = DvrConfigure(duration = RecordDuration.FiveMin)
+    private var mConfigure: DvrConfigure = DvrConfigure(duration = RecordDuration.FiveMin, resolution = RecordResolution.FHD)
         set(value) {
             field = value
             mConfigUpdateListener.forEach {

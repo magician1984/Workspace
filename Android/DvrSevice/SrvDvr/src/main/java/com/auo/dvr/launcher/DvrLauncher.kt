@@ -11,6 +11,7 @@ import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrState
 import com.auo.dvr_core.RecordDuration
 import com.auo.dvr_core.RecordFile
+import com.auo.dvr_core.RecordResolution
 import java.io.File
 
 internal class DvrLauncher(
@@ -86,7 +87,7 @@ internal class DvrLauncher(
             onServiceStateUpdateListener?.onStateUpdate(value)
         }
 
-    private var mDvrConfigure: DvrConfigure = DvrConfigure(duration = RecordDuration.FiveMin)
+    private var mDvrConfigure: DvrConfigure = DvrConfigure(duration = RecordDuration.FiveMin, resolution = RecordResolution.FHD)
         set(value) {
             field = value
             onConfigureUpdateListener?.onConfigureUpdate(value)

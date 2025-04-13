@@ -7,17 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,22 +29,26 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.auo.dvr_core.CamLocation
+import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.RecordType
 import com.auo.dvr_ui.entity.IUseCase
 import com.auo.dvr_ui.entity.IUseCaseDeleteFile
 import com.auo.dvr_ui.entity.IUseCaseGetCacheFile
+import com.auo.dvr_ui.entity.IUseCaseGetConfigure
 import com.auo.dvr_ui.entity.IUseCaseGetDvrState
 import com.auo.dvr_ui.entity.IUseCaseGetListFiles
 import com.auo.dvr_ui.entity.IUseCaseLockFile
 import com.auo.dvr_ui.entity.IUseCaseRegisterDvrStateListener
 import com.auo.dvr_ui.entity.IUseCaseRegisterListener
+import com.auo.dvr_ui.entity.IUseCaseSetConfigure
 import com.auo.dvr_ui.entity.IUseCaseUnlockFile
+import com.auo.dvr_ui.entity.IUseCaseUnmountStorage
 import com.auo.dvr_ui.entity.RecordFileData
 import com.auo.dvr_ui.presentation.contents.ActionBarView
 import com.auo.dvr_ui.presentation.contents.RecordListView
 import com.auo.dvr_ui.presentation.contents.ReplayView
+import com.auo.dvr_ui.presentation.effect.EffectViewProvider
 import com.auo.dvr_ui.ui.theme.DvrServiceTheme
 import com.auo.dvr_ui.usecase.IPresenter
 import kotlinx.coroutines.CoroutineScope
@@ -65,6 +63,8 @@ class Presenter(
     internal sealed class Effect {
         data class OnError(val message: String) : Effect()
         data class OnRemoveProtectedFile(val file: RecordFileData) : Effect()
+        data class OnSetting(val configure: DvrConfigure) : Effect()
+        data object OnUnmountStorage : Effect()
     }
 
     internal data class State(
@@ -103,7 +103,10 @@ class Presenter(
         useCaseDeleteFile: IUseCaseDeleteFile,
         useCaseGetCacheFile: IUseCaseGetCacheFile,
         useCaseGetDvrState: IUseCaseGetDvrState,
-        useCaseRegisterDvrStateListener: IUseCaseRegisterDvrStateListener
+        useCaseRegisterDvrStateListener: IUseCaseRegisterDvrStateListener,
+        useCaseGetConfigure: IUseCaseGetConfigure,
+        useCaseSetConfigure: IUseCaseSetConfigure,
+        useCaseUnmountStorage: IUseCaseUnmountStorage
     ) {
         useCaseList.clear()
         useCaseList.addAll(
@@ -115,7 +118,10 @@ class Presenter(
                 useCaseDeleteFile,
                 useCaseGetCacheFile,
                 useCaseGetDvrState,
-                useCaseRegisterDvrStateListener
+                useCaseRegisterDvrStateListener,
+                useCaseGetConfigure,
+                useCaseSetConfigure,
+                useCaseUnmountStorage
             )
         )
 
@@ -272,6 +278,20 @@ class Presenter(
                 is IUserIntents.ConfirmDeleteFile -> {
                     state = state.copy(effect = Effect.OnRemoveProtectedFile(intent.file))
                 }
+
+                IUserIntents.ConfirmUnmountStorage -> {
+                    state = state.copy(effect = Effect.OnUnmountStorage)
+                }
+                IUserIntents.OpenSettings -> {
+                    val configure = findUseCase<IUseCaseGetConfigure>()?.invoke() ?: return@launch
+                    state = state.copy(effect = Effect.OnSetting(configure))
+                }
+                IUserIntents.UnmountStorage -> {
+                    findUseCase<IUseCaseUnmountStorage>()?.invoke()
+                }
+                is IUserIntents.UpdateConfigure -> {
+                    findUseCase<IUseCaseSetConfigure>()?.invoke(intent.configure)
+                }
             }
         }
     }
@@ -282,43 +302,34 @@ class Presenter(
 
         when (mEffect) {
             is Effect.OnError -> {
-                Dialog(onDismissRequest = {}) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth(0.8f)
-                            .fillMaxHeight(0.3f)
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = mEffect.message ?: "", modifier = Modifier
-                                .fillMaxSize()
-                                .wrapContentSize(), textAlign = TextAlign.Center
-                        )
-                    }
-                }
+                EffectViewProvider.ErrorDialog(message = mEffect.message)
             }
 
             is Effect.OnRemoveProtectedFile -> {
-                AlertDialog(
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .padding(16.dp),
-                    onDismissRequest = { /*TODO*/ },
-                    title = { Text(text = "Confirm Delete") },
-                    text = { Text(text = "Are you sure you want to delete this file?") },
-                    dismissButton = {
-                        TextButton(onClick = { state = state.copy(effect = null) }) {
-                            Text(text = "Dismiss")
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            state = state.copy(effect = null)
-                            onIntent(IUserIntents.DeleteFile(mEffect.file))
-                        }) {
-                            Text(text = "Confirm")
-                        }
-                    })
+                EffectViewProvider.DeleteConfirmDialog(onConfirm = {
+                    state = state.copy(effect = null)
+                    onIntent(IUserIntents.DeleteFile(mEffect.file))
+                }, onDismiss = {
+                    state = state.copy(effect = null)
+                })
+            }
+
+            is Effect.OnSetting -> {
+                EffectViewProvider.SettingDialog(mEffect.configure, onConfirm = {
+                    onIntent(IUserIntents.UpdateConfigure(it))
+                    state = state.copy(effect = null)
+                }, onDismiss = {
+                    state = state.copy(effect = null)
+                })
+            }
+
+            Effect.OnUnmountStorage ->{
+                EffectViewProvider.UnmountConfirmDialog(onConfirm = {
+                    onIntent(IUserIntents.UnmountStorage)
+                    state = state.copy(effect = null)
+                }, onDismiss = {
+                    state = state.copy(effect = null)
+                })
             }
         }
     }

@@ -1,6 +1,9 @@
 package com.auo.dvr_ui.presentation
 
 import com.auo.dvr_core.CamLocation
+import com.auo.dvr_core.DvrConfigure
+import com.auo.dvr_core.RecordDuration
+import com.auo.dvr_core.RecordResolution
 import com.auo.dvr_ui.entity.RecordFileData
 
 sealed class IUserIntents{
@@ -11,11 +14,15 @@ sealed class IUserIntents{
             return "ViewCameraLocation(camLocation=$camLocation)"
         }
     }
-    class SelectFile(val file : RecordFileData) : IUserIntents()
+    data class SelectFile(val file : RecordFileData) : IUserIntents()
     data object UnselectFile : IUserIntents()
-    class LockFile(val file : RecordFileData) : IUserIntents()
-    class UnlockFile(val file : RecordFileData) : IUserIntents()
-    class DeleteFile(val file : RecordFileData) : IUserIntents()
-    class ConfirmDeleteFile(val file : RecordFileData) : IUserIntents()
+    data class LockFile(val file : RecordFileData) : IUserIntents()
+    data class UnlockFile(val file : RecordFileData) : IUserIntents()
+    data class DeleteFile(val file : RecordFileData) : IUserIntents()
+    data class ConfirmDeleteFile(val file : RecordFileData) : IUserIntents()
+    data object ConfirmUnmountStorage : IUserIntents()
+    data object OpenSettings : IUserIntents()
+    data object UnmountStorage : IUserIntents()
+    data class UpdateConfigure(val configure: DvrConfigure) : IUserIntents()
     data object ReplayFile : IUserIntents()
 }

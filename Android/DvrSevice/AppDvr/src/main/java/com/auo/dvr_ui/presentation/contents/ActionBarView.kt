@@ -39,6 +39,10 @@ internal class ActionBarView(override val onIntent: (IUserIntents) -> Unit) : Pr
             R.drawable.baseline_settings_24
         }
 
+        val storageIconRes = remember {
+            R.drawable.baseline_sd_storage_24
+        }
+
         Row(modifier = modifier.padding(8.dp)) {
             TypeButton(
                 modifier = Modifier
@@ -61,11 +65,24 @@ internal class ActionBarView(override val onIntent: (IUserIntents) -> Unit) : Pr
             }
             Spacer(modifier = modifier.weight(1f))
             Icon(
+                painter = painterResource(id = storageIconRes),
+                contentDescription = "",
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .aspectRatio(1f)
+                    .clickable {
+                        onIntent(IUserIntents.ConfirmUnmountStorage)
+                    }
+            )
+            Icon(
                 painter = painterResource(id = settingIconRes),
                 contentDescription = "",
                 modifier = Modifier
                     .fillMaxHeight()
                     .aspectRatio(1f)
+                    .clickable {
+                        onIntent(IUserIntents.OpenSettings)
+                    }
             )
         }
     }

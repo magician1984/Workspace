@@ -10,6 +10,7 @@ import com.auo.dvr_core.OnRecordUpdateListener
 import com.auo.dvr_core.OnStateUpdateListener
 import com.auo.dvr_core.RecordDuration
 import com.auo.dvr_core.RecordFile
+import com.auo.dvr_core.RecordResolution
 import com.auo.dvr_core.RecordType
 import java.io.File
 
@@ -26,7 +27,7 @@ class MockService(private val context: Context) : IDvrService.Stub() {
 
     private var isMounted = true
 
-    private var mConfigure : DvrConfigure = DvrConfigure(RecordDuration.FiveMin)
+    private var mConfigure : DvrConfigure = DvrConfigure(RecordDuration.FiveMin, RecordResolution.FHD)
 
     init {
         //random generate 200 record files. filename is {timestamp}.mp4

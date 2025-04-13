@@ -20,6 +20,9 @@ android {
             storeFile = file("/mnt/Workspace/Projects/Side/Workspace/Android/DvrSevice/platform.keystore")
             storePassword = "123456"
         }
+        create("debug_local") {
+            // Use default debug keystore
+        }
     }
 
     defaultConfig {

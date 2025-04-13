@@ -1,14 +1,18 @@
 package com.auo.dvr_ui.usecase
 
+import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_ui.entity.DvrStateData
 import com.auo.dvr_ui.entity.IUseCaseDeleteFile
 import com.auo.dvr_ui.entity.IUseCaseGetCacheFile
+import com.auo.dvr_ui.entity.IUseCaseGetConfigure
 import com.auo.dvr_ui.entity.IUseCaseGetDvrState
 import com.auo.dvr_ui.entity.IUseCaseGetListFiles
 import com.auo.dvr_ui.entity.IUseCaseLockFile
 import com.auo.dvr_ui.entity.IUseCaseRegisterDvrStateListener
 import com.auo.dvr_ui.entity.IUseCaseRegisterListener
+import com.auo.dvr_ui.entity.IUseCaseSetConfigure
 import com.auo.dvr_ui.entity.IUseCaseUnlockFile
+import com.auo.dvr_ui.entity.IUseCaseUnmountStorage
 import com.auo.dvr_ui.entity.RecordFileData
 import java.io.File
 
@@ -63,5 +67,22 @@ class UseCaseRegisterDvrStateListener(private val datasource: IDataSource) :
             callback(it)
         }
     }
+}
 
+class UseCaseGetConfigure(private val datasource: IDataSource) : IUseCaseGetConfigure {
+    override fun invoke(): DvrConfigure {
+        return datasource.getConfigure()
+    }
+}
+
+class UseCaseSetConfigure(private val datasource: IDataSource) : IUseCaseSetConfigure {
+    override fun invoke(configure: DvrConfigure) {
+        return datasource.updateConfigure(configure)
+    }
+}
+
+class UseCaseUnmountStorage(private val datasource: IDataSource) : IUseCaseUnmountStorage {
+    override fun invoke() {
+        datasource.unmountStorage()
+    }
 }
