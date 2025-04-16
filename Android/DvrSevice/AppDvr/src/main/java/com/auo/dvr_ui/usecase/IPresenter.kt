@@ -1,5 +1,6 @@
 package com.auo.dvr_ui.usecase
 
+import com.auo.dvr_ui.entity.IUseCase
 import com.auo.dvr_ui.entity.IUseCaseDeleteFile
 import com.auo.dvr_ui.entity.IUseCaseGetCacheFile
 import com.auo.dvr_ui.entity.IUseCaseGetConfigure
@@ -14,19 +15,7 @@ import com.auo.dvr_ui.entity.IUseCaseUnmountStorage
 
 interface IPresenter {
 
-    fun summit(
-        useCaseGetListFiles: IUseCaseGetListFiles,
-        useCaseRegisterListener: IUseCaseRegisterListener,
-        useCaseLockFile: IUseCaseLockFile,
-        useCaseUnlockFile: IUseCaseUnlockFile,
-        useCaseDeleteFile: IUseCaseDeleteFile,
-        useCaseGetCacheFile: IUseCaseGetCacheFile,
-        useCaseGetDvrState: IUseCaseGetDvrState,
-        useCaseRegisterDvrStateListener: IUseCaseRegisterDvrStateListener,
-        useCaseGetConfigure: IUseCaseGetConfigure,
-        useCaseSetConfigure: IUseCaseSetConfigure,
-        useCaseUnmountStorage: IUseCaseUnmountStorage
-    )
+    fun summit(vararg useCases: IUseCase)
 
     fun onReady()
     fun onLoading()

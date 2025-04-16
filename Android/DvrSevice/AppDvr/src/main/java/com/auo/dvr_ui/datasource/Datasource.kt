@@ -32,9 +32,10 @@ class Datasource(
 
     init {
         //TODO: String for locale
-        errorMessages[DvrState.ErrorType.None] = ""
+        errorMessages[DvrState.ErrorType.None] = "Service not start"
         errorMessages[DvrState.ErrorType.FlashDriveNotAvailable] = "Flash drive is not available"
         errorMessages[DvrState.ErrorType.InternalError] = "Internal error"
+        errorMessages[DvrState.ErrorType.InRestart] = "In restarting"
 
         Log.d("Datasource", "register listener")
         service.registerListener(object : OnRecordUpdateListener.Stub() {

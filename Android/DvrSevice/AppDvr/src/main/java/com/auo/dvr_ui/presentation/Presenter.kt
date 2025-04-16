@@ -95,37 +95,11 @@ class Presenter(
 
     private val backgroundScope = CoroutineScope(Dispatchers.IO)
 
-    override fun summit(
-        useCaseGetListFiles: IUseCaseGetListFiles,
-        useCaseRegisterListener: IUseCaseRegisterListener,
-        useCaseLockFile: IUseCaseLockFile,
-        useCaseUnlockFile: IUseCaseUnlockFile,
-        useCaseDeleteFile: IUseCaseDeleteFile,
-        useCaseGetCacheFile: IUseCaseGetCacheFile,
-        useCaseGetDvrState: IUseCaseGetDvrState,
-        useCaseRegisterDvrStateListener: IUseCaseRegisterDvrStateListener,
-        useCaseGetConfigure: IUseCaseGetConfigure,
-        useCaseSetConfigure: IUseCaseSetConfigure,
-        useCaseUnmountStorage: IUseCaseUnmountStorage
-    ) {
+    override fun summit(vararg useCases: IUseCase) {
         useCaseList.clear()
-        useCaseList.addAll(
-            listOf(
-                useCaseGetListFiles,
-                useCaseRegisterListener,
-                useCaseLockFile,
-                useCaseUnlockFile,
-                useCaseDeleteFile,
-                useCaseGetCacheFile,
-                useCaseGetDvrState,
-                useCaseRegisterDvrStateListener,
-                useCaseGetConfigure,
-                useCaseSetConfigure,
-                useCaseUnmountStorage
-            )
-        )
+        useCaseList.addAll(useCases)
 
-        useCaseRegisterListener {
+        findUseCase<IUseCaseRegisterListener>()?.invoke {
             backgroundScope.launch {
                 state =
                     state.copy(fileList = mutableStateListOf<RecordFileData>().apply {
@@ -139,7 +113,7 @@ class Presenter(
             }
         }
 
-        useCaseRegisterDvrStateListener {
+        findUseCase<IUseCaseRegisterDvrStateListener>()?.invoke {
             backgroundScope.launch {
                 val errorEffect =
                     if (!it.isAvailable) Effect.OnError(it.errorMessage ?: "") else null

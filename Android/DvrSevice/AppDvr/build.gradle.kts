@@ -11,17 +11,14 @@ android {
         getByName("debug"){
             keyAlias = "platform"
             keyPassword = "123456"
-            storeFile = file("/mnt/Workspace/Projects/Side/Workspace/Android/DvrSevice/platform.keystore")
+            storeFile = file("/mnt/Workspace/Projects/Side/Workspace/Android/DvrSevice/keys/ES9/platform.keystore")
             storePassword = "123456"
         }
         create("release") {
             keyAlias = "platform"
             keyPassword = "123456"
-            storeFile = file("/mnt/Workspace/Projects/Side/Workspace/Android/DvrSevice/platform.keystore")
+            storeFile = file("/mnt/Workspace/Projects/Side/Workspace/Android/DvrSevice/keys/ES9/platform.keystore")
             storePassword = "123456"
-        }
-        create("debug_local") {
-            // Use default debug keystore
         }
     }
 
@@ -35,7 +32,6 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        signingConfig = signingConfigs.getByName("debug")
 
 
     }

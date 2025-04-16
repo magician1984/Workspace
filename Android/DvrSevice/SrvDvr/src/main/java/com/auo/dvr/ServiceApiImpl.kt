@@ -18,7 +18,7 @@ class ServiceApiImpl(dvrLauncher: DvrService.IDvrLauncher) : DvrService.IService
 
     private val mConfigUpdateListener: MutableList<OnConfigureUpdateListener> = mutableListOf()
 
-    private var mState: DvrState = DvrState(false, DvrState.ErrorType.None)
+    private var mState: DvrState = mDvrLauncher.handleUserIntent(UserIntent.GetState)
         set(value) {
             field = value
             mStateUpdateListeners.forEach {
@@ -39,6 +39,10 @@ class ServiceApiImpl(dvrLauncher: DvrService.IDvrLauncher) : DvrService.IService
             DvrService.IDvrLauncher.OnServiceStateUpdateListener { state ->
                 mState = state
             }
+
+        mDvrLauncher.onConfigureUpdateListener = DvrService.IDvrLauncher.OnConfigureUpdateListener { configure ->
+            mConfigure = configure
+        }
     }
 
     override fun updateState(state: DvrState) {

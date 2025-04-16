@@ -19,6 +19,7 @@ import java.io.File
 
 class DvrService : Service() {
     interface IDvrLauncher{
+
         fun interface OnServiceStateUpdateListener{
             fun onStateUpdate(state: DvrState)
         }
@@ -55,7 +56,7 @@ class DvrService : Service() {
             if(!sourceFolder.exists())
                 sourceFolder.mkdirs()
 
-            mDvrLauncher = DvrLauncher(this, sourceFolder, UsbDetector(this), ConfigureUpdater(sourceFolder))
+            mDvrLauncher = DvrLauncher(this, sourceFolder, UsbDetector(this), ConfigureUpdater(sourceFolder, this))
 
 
             mServiceApi = ServiceApiImpl(mDvrLauncher)

@@ -7,7 +7,8 @@ data class DvrState(val isAvailable: Boolean, val errorType: ErrorType) : Parcel
     enum class ErrorType {
         None,
         FlashDriveNotAvailable,
-        InternalError
+        InternalError,
+        InRestart
     }
 
     constructor(parcel: Parcel) : this(

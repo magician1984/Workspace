@@ -24,8 +24,18 @@ class MockService(private val context: Context) : IDvrService.Stub() {
     private val mConfigureListeners = mutableListOf<OnConfigureUpdateListener>()
 
     private var mState = DvrState(true, DvrState.ErrorType.None)
+        set(value) {
+            field = value
+            mStateListeners.forEach {
+                it.onStateUpdate()
+            }
+        }
 
     private var isMounted = true
+        set(value) {
+            field = value
+            mState = mState.copy(isAvailable = isMounted, errorType = if(isMounted) DvrState.ErrorType.None else DvrState.ErrorType.FlashDriveNotAvailable)
+        }
 
     private var mConfigure : DvrConfigure = DvrConfigure(RecordDuration.FiveMin, RecordResolution.FHD)
 
@@ -52,7 +62,9 @@ class MockService(private val context: Context) : IDvrService.Stub() {
     override fun getConfigure(): DvrConfigure = mConfigure
 
     override fun updataConfigure(configure: DvrConfigure){
-        Thread.sleep(1000)
+        mState = mState.copy(isAvailable = false, errorType = DvrState.ErrorType.InRestart)
+        Thread.sleep(2000)
+        mState = mState.copy(isAvailable = true, errorType = DvrState.ErrorType.None)
         mConfigure = configure
         mConfigureListeners.forEach { it.onUpdate() }
     }
@@ -94,7 +106,7 @@ class MockService(private val context: Context) : IDvrService.Stub() {
     override fun unregisterConfigureListener(listener: OnConfigureUpdateListener?) : Unit = if(!mConfigureListeners.remove(listener!!)) throw Exception("Listener not registered") else Unit
 
     override fun unmountFlash() {
-        Thread.sleep(5000)
+        Thread.sleep(1000)
         isMounted = false
     }
 

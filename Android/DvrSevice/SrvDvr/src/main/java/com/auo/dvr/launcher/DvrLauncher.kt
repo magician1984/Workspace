@@ -9,9 +9,7 @@ import com.auo.dvr.launcher.DvrLauncher.IFileManager.EventType
 import com.auo.dvr.launcher.filemanager.FileManagerBuilder
 import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrState
-import com.auo.dvr_core.RecordDuration
 import com.auo.dvr_core.RecordFile
-import com.auo.dvr_core.RecordResolution
 import java.io.File
 
 internal class DvrLauncher(
@@ -24,7 +22,6 @@ internal class DvrLauncher(
         private const val EVENT_FILE_EXTENSION = "evt"
         private const val WORKAROUND_FILE_EXTENSION = "h265"
         private const val RECORD_FILE_EXTENSION = "mp4"
-        private const val CONFIG_FILE_EXTENSION = "cfg"
 
         private const val TARGET_FOLDER_NAME = "Dvr_dst"
     }
@@ -72,24 +69,30 @@ internal class DvrLauncher(
     }
 
     internal interface IConfigureUpdater {
-        val configure: DvrConfigure?
+        val configure: DvrConfigure
+        fun enable()
+        fun disable()
         fun updateConfigure(configure: DvrConfigure)
-        fun onConfigureUpdate(callback: (DvrConfigure) -> Unit)
-        fun onConfigureFileUpdate(eventType: EventType, file: File)
+        fun release()
     }
 
     override var onServiceStateUpdateListener: IDvrLauncher.OnServiceStateUpdateListener? = null
     override var onConfigureUpdateListener: IDvrLauncher.OnConfigureUpdateListener? = null
 
-    private var mServiceState: DvrState = DvrState(false, DvrState.ErrorType.InternalError)
+    private var mServiceState: DvrState = DvrState(false, DvrState.ErrorType.None)
         set(value) {
             field = value
             onServiceStateUpdateListener?.onStateUpdate(value)
+            if(value.isAvailable)
+                mConfigureUpdater.enable()
+            else
+                mConfigureUpdater.disable()
         }
 
-    private var mDvrConfigure: DvrConfigure = DvrConfigure(duration = RecordDuration.FiveMin, resolution = RecordResolution.FHD)
+    private var mDvrConfigure: DvrConfigure? = null
         set(value) {
             field = value
+            if(value == null) return
             onConfigureUpdateListener?.onConfigureUpdate(value)
         }
 
@@ -123,11 +126,6 @@ internal class DvrLauncher(
                         eventType,
                         File(mSharedPartitionFolder, path)
                     )
-
-                    CONFIG_FILE_EXTENSION -> mConfigureUpdater.onConfigureFileUpdate(
-                        eventType,
-                        File(mSharedPartitionFolder, path)
-                    )
                 }
             }
         }
@@ -137,6 +135,18 @@ internal class DvrLauncher(
         systemCheck()
 
         mDeviceDetect.onFlashDiskMountStateUpdate { onFlashDiskMountStateUpdate(it) }
+
+        mDvrConfigure = mConfigureUpdater.configure
+
+        var isAvailable = true
+        var errorType = DvrState.ErrorType.None
+
+        if(mDeviceDetect.mountedFolder == null){
+            isAvailable = false
+            errorType = DvrState.ErrorType.FlashDriveNotAvailable
+        }
+
+        mServiceState = DvrState(isAvailable, errorType)
 
         Log.d(
             "DvrLauncher",
@@ -163,6 +173,7 @@ internal class DvrLauncher(
 
     override fun release() {
         mFileObserver.stopWatching()
+        mConfigureUpdater.release()
     }
 
 
@@ -170,6 +181,7 @@ internal class DvrLauncher(
         mFileManager?.release()
 
         mFileManager = if (isMounted) {
+            systemCheck()
             FileManagerBuilder().setTargetRoot(mDeviceDetect.mountedFolder!!)
                 .setEventCacheRoot(mContext.cacheDir).build()
         } else {
@@ -181,6 +193,7 @@ internal class DvrLauncher(
 
     private fun updateConfigure(configure: DvrConfigure) {
         mConfigureUpdater.updateConfigure(configure)
+        mDvrConfigure = configure
     }
 
     // Workaround: Provider can not generate mp4 file, so we need to convert h265 to mp4
