@@ -143,7 +143,9 @@ internal class DvrLauncher(
 
         mQnxServerMonitor.registerServerStateListener(::onQnxServerStateUpdate)
 
-        stateUpdate()
+        onFlashDiskMountStateUpdate(mDeviceDetect.mountedFolder != null)
+
+        onQnxServerStateUpdate(mQnxServerMonitor.isActive)
 
         mFileObserver.startWatching()
 
@@ -154,6 +156,7 @@ internal class DvrLauncher(
     }
 
     override fun <R> handleUserIntent(intent: UserIntent<R>): R {
+        Log.d("DvrLauncher", "handleUserIntent: $intent, $mFileManager")
         val result = when (intent) {
             is UserIntent.CopyRecord -> mFileManager?.copyFile(intent.recordFile, intent.destPath)
             is UserIntent.DeleteRecord -> mFileManager?.deleteFile(intent.recordFile)

@@ -73,7 +73,23 @@ class Presenter(
         val camLocation: CamLocation,
         val isProtected: Boolean,
         val effect: Effect?
-    )
+    ) {
+        companion object {
+            fun parseList(
+                list: List<RecordFileData>,
+                isProtected: Boolean
+            ): SnapshotStateList<RecordFileData> {
+                return mutableStateListOf<RecordFileData>().apply {
+                    addAll(list.filter {
+                        if (isProtected)
+                            it.type == RecordType.Protected
+                        else
+                            it.type != RecordType.Protected
+                    })
+                }
+            }
+        }
+    }
 
     internal interface IView {
         val onIntent: (IUserIntents) -> Unit
@@ -101,15 +117,8 @@ class Presenter(
 
         findUseCase<IUseCaseRegisterListener>()?.invoke {
             backgroundScope.launch {
-                state =
-                    state.copy(fileList = mutableStateListOf<RecordFileData>().apply {
-                        addAll(it.filter {
-                            if (state.isProtected)
-                                it.type == RecordType.Protected
-                            else
-                                it.type != RecordType.Protected
-                        })
-                    })
+                state = state.copy(fileList = State.parseList(it, state.isProtected))
+
             }
         }
 
@@ -117,7 +126,16 @@ class Presenter(
             backgroundScope.launch {
                 val errorEffect =
                     if (!it.isAvailable) Effect.OnError(it.errorMessage ?: "") else null
-                state = state.copy(effect = errorEffect)
+
+                val fileList: List<RecordFileData> = if (it.isAvailable)
+                    findUseCase<IUseCaseGetListFiles>()?.invoke() ?: emptyList()
+                else
+                    emptyList()
+
+                state = state.copy(
+                    fileList = State.parseList(fileList, state.isProtected),
+                    effect = errorEffect
+                )
             }
         }
     }
@@ -126,18 +144,12 @@ class Presenter(
         drawContent {
 
             LaunchedEffect(key1 = LocalContext.current) {
-                val list = findUseCase<IUseCaseGetListFiles>()?.invoke()?.filter { item ->
-                    if (state.isProtected) item.type == RecordType.Protected else item.type != RecordType.Protected
-                } ?: return@LaunchedEffect
-                val dvrState = findUseCase<IUseCaseGetDvrState>()?.invoke() ?: return@LaunchedEffect
-                val errorEffect = if (!dvrState.isAvailable) Effect.OnError(
-                    dvrState.errorMessage ?: ""
-                ) else state.effect
-
-                state = state.copy(
-                    fileList = mutableStateListOf<RecordFileData>().apply { addAll(list) },
-                    effect = errorEffect
-                )
+                findUseCase<IUseCaseGetDvrState>()?.invoke()?.let { dvrState ->
+                    val effect = if(!dvrState.isAvailable) Effect.OnError(dvrState.errorMessage ?: "") else null
+                    val fileList = if(dvrState.isAvailable) findUseCase<IUseCaseGetListFiles>()?.invoke() ?: emptyList() else emptyList()
+                    Log.d("Presenter", "Effect : $effect, List size : ${fileList.size}")
+                    state = state.copy(State.parseList(fileList, state.isProtected), effect = effect)
+                }
             }
 
             Column(
@@ -256,13 +268,16 @@ class Presenter(
                 IUserIntents.ConfirmUnmountStorage -> {
                     state = state.copy(effect = Effect.OnUnmountStorage)
                 }
+
                 IUserIntents.OpenSettings -> {
                     val configure = findUseCase<IUseCaseGetConfigure>()?.invoke() ?: return@launch
                     state = state.copy(effect = Effect.OnSetting(configure))
                 }
+
                 IUserIntents.UnmountStorage -> {
                     findUseCase<IUseCaseUnmountStorage>()?.invoke()
                 }
+
                 is IUserIntents.UpdateConfigure -> {
                     findUseCase<IUseCaseSetConfigure>()?.invoke(intent.configure)
                 }
@@ -297,7 +312,7 @@ class Presenter(
                 })
             }
 
-            Effect.OnUnmountStorage ->{
+            Effect.OnUnmountStorage -> {
                 EffectViewProvider.UnmountConfirmDialog(onConfirm = {
                     onIntent(IUserIntents.UnmountStorage)
                     state = state.copy(effect = null)

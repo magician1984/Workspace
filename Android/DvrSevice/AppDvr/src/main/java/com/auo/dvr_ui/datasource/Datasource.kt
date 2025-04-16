@@ -23,7 +23,11 @@ class Datasource(
 
     private var mStateListeners: MutableList<IDataSource.DvrStateListener> = mutableListOf()
 
-    private var _dvrState: DvrStateData = DvrStateData(DvrState(true, DvrState.ErrorType.None))
+    private var _dvrState: DvrStateData = DvrStateData(DvrState(false, DvrState.ErrorType.None))
+        set(value) {
+            field = value
+            mStateListeners.forEach { it.onUpdate(field)}
+        }
 
     override val dvrState: DvrStateData
         get() = _dvrState
@@ -48,11 +52,11 @@ class Datasource(
         Log.d("Datasource", "register state listener")
         service.registerStateListener(object : OnStateUpdateListener.Stub() {
             override fun onStateUpdate() {
-                updateDvrState()
+                updateDvrState(service.state)
             }
         })
 
-        updateDvrState()
+        updateDvrState(service.state)
     }
 
     override fun getAllRecords(): List<RecordFileData> = withServiceAvailable(onAvailable = {
@@ -112,29 +116,17 @@ class Datasource(
             )
         })
 
-    private fun updateDvrState() {
-        Log.d("Datasource", "updateDvrState:")
-        val state = service.state
-
-        Log.d("Datasource", "updateDvrState: state: $state")
+    private fun updateDvrState(state : DvrState) {
         val message: String = errorMessages.getOrDefault(state.errorType, "")
 
-        Log.d("Datasource", "updateDvrState: message: $message")
         _dvrState = DvrStateData(state, message)
-
-        Log.d("Datasource", "updateDvrState: listeners: ${mStateListeners.size}")
-        mStateListeners.forEach { it.onUpdate(dvrState) }
-
-        if (state.isAvailable) {
-            val records = getAllRecords()
-            mListeners.forEach { it.onUpdate(records) }
-        }
     }
 
     private inline fun <R> withServiceAvailable(
         crossinline onAvailable: (service: IDvrService) -> R,
         onUnavailable: () -> R
     ): R {
+        Log.d("Datasource", "withServiceAvailable : ${dvrState.isAvailable}")
         return if (dvrState.isAvailable)
             onAvailable(service)
         else
