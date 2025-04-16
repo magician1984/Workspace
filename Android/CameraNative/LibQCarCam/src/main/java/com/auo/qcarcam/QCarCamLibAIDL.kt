@@ -1,7 +1,5 @@
 package com.auo.qcarcam
 
-import android.os.IBinder
-import android.os.ServiceManager
 import android.util.Log
 import android.view.Surface
 import com.auo.qcarcam.exception.QCarCamException
@@ -53,11 +51,11 @@ class QCarCamLibAIDL : IQCarCamLib {
 
     init {
         Log.d(TAG, "Init: connect to service")
-        val binder: IBinder = ServiceManager.getService(SERVICE_NAME)
-            ?: throw QCarCamLibAIDLException("QCarCam service not found")
-        service = IQcarCamera.Stub.asInterface(binder)
-            ?: throw QCarCamLibAIDLException("Binder is not match")
-        Log.d(TAG, "Init done.")
+//        val binder: IBinder = ServiceManager.getService(SERVICE_NAME)
+//            ?: throw QCarCamLibAIDLException("QCarCam service not found")
+//        service = IQcarCamera.Stub.asInterface(binder)
+//            ?: throw QCarCamLibAIDLException("Binder is not match")
+//        Log.d(TAG, "Init done.")
     }
 
     override fun attachSurface(surface: Surface) {

@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun initialize() {
-        avmSource = AVMSource()
+        avmSource = AVMSource(this)
 
         controlModel = ControlModel(
             switchMode = UseCaseSwitchMode(avmSource),
@@ -98,15 +98,4 @@ private fun View(
             }
         }
     }
-}
-
-@Composable
-@Preview(device = Devices.TABLET)
-private fun MainPreview() {
-    View(rendererView = { PreviewPage(model = PreviewModel()) }, controlView = {
-        ControlPage(
-            modifier = it,
-            model = ControlModel()
-        )
-    })
 }
