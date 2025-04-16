@@ -16,7 +16,7 @@ internal class DvrLauncher(
     private val mContext: Context,
     private val mSharedPartitionFolder: File,
     private val mDeviceDetect: IDeviceDetect,
-    private val mConfigureUpdater: IConfigureUpdater
+    private val mQnxServerMonitor: IQNXServerMonitor
 ) : IDvrLauncher {
     companion object {
         private const val EVENT_FILE_EXTENSION = "evt"
@@ -34,7 +34,8 @@ internal class DvrLauncher(
 
         enum class EventType {
             Create,
-            Close
+            Close,
+            Delete
         }
 
         interface Builder {
@@ -68,12 +69,14 @@ internal class DvrLauncher(
         fun unmount()
     }
 
-    internal interface IConfigureUpdater {
-        val configure: DvrConfigure
-        fun enable()
-        fun disable()
+    internal interface IQNXServerMonitor {
+        val configure: DvrConfigure?
+
+        val isActive: Boolean
+
         fun updateConfigure(configure: DvrConfigure)
-        fun release()
+        fun registerServerStateListener(listener: (Boolean) -> Unit)
+        fun onFileUpdate(eventType: EventType, file: File)
     }
 
     override var onServiceStateUpdateListener: IDvrLauncher.OnServiceStateUpdateListener? = null
@@ -83,16 +86,12 @@ internal class DvrLauncher(
         set(value) {
             field = value
             onServiceStateUpdateListener?.onStateUpdate(value)
-            if(value.isAvailable)
-                mConfigureUpdater.enable()
-            else
-                mConfigureUpdater.disable()
         }
 
     private var mDvrConfigure: DvrConfigure? = null
         set(value) {
             field = value
-            if(value == null) return
+            if (value == null) return
             onConfigureUpdateListener?.onConfigureUpdate(value)
         }
 
@@ -101,13 +100,20 @@ internal class DvrLauncher(
     private var mFileManager: IFileManager? = null
 
     private val mFileObserver: FileObserver =
-        object : FileObserver(mSharedPartitionFolder.absolutePath, CLOSE_WRITE or CREATE) {
+        object : FileObserver(mSharedPartitionFolder.absolutePath, CREATE or CLOSE_WRITE or DELETE) {
             override fun onEvent(event: Int, path: String?) {
+                Log.d("DvrLauncher", "onEvent: $event, $path")
+
                 if (path == null)
                     return
 
-                val eventType: IFileManager.EventType =
-                    if (event == CLOSE_WRITE) IFileManager.EventType.Close else IFileManager.EventType.Create
+                val eventType: IFileManager.EventType = when(event){
+                    CREATE -> EventType.Create
+                    CLOSE_WRITE -> EventType.Close
+                    DELETE -> EventType.Delete
+                    else -> return
+                }
+
                 Log.d("DvrLauncher", "onEvent: $eventType, $path")
                 when (path.substringAfterLast('.')) {
                     EVENT_FILE_EXTENSION -> mFileManager?.onFileUpdate(
@@ -126,27 +132,20 @@ internal class DvrLauncher(
                         eventType,
                         File(mSharedPartitionFolder, path)
                     )
+
+                    else -> mQnxServerMonitor.onFileUpdate(eventType, File(mSharedPartitionFolder, path))
                 }
             }
         }
 
     init {
+        mDeviceDetect.onFlashDiskMountStateUpdate(::onFlashDiskMountStateUpdate)
 
-        systemCheck()
+        mQnxServerMonitor.registerServerStateListener(::onQnxServerStateUpdate)
 
-        mDeviceDetect.onFlashDiskMountStateUpdate { onFlashDiskMountStateUpdate(it) }
+        stateUpdate()
 
-        mDvrConfigure = mConfigureUpdater.configure
-
-        var isAvailable = true
-        var errorType = DvrState.ErrorType.None
-
-        if(mDeviceDetect.mountedFolder == null){
-            isAvailable = false
-            errorType = DvrState.ErrorType.FlashDriveNotAvailable
-        }
-
-        mServiceState = DvrState(isAvailable, errorType)
+        mFileObserver.startWatching()
 
         Log.d(
             "DvrLauncher",
@@ -173,7 +172,6 @@ internal class DvrLauncher(
 
     override fun release() {
         mFileObserver.stopWatching()
-        mConfigureUpdater.release()
     }
 
 
@@ -181,18 +179,30 @@ internal class DvrLauncher(
         mFileManager?.release()
 
         mFileManager = if (isMounted) {
-            systemCheck()
-            FileManagerBuilder().setTargetRoot(mDeviceDetect.mountedFolder!!)
+            FileManagerBuilder().setTargetRoot(
+                File(
+                    mDeviceDetect.mountedFolder!!,
+                    TARGET_FOLDER_NAME
+                )
+            )
                 .setEventCacheRoot(mContext.cacheDir).build()
         } else {
             null
         }
 
         mFileManager?.init()
+
+        stateUpdate(isFlashMounted = isMounted)
+    }
+
+    private fun onQnxServerStateUpdate(isActive: Boolean) {
+        mDvrConfigure = mQnxServerMonitor.configure
+
+        stateUpdate(isQnxServerActive = isActive)
     }
 
     private fun updateConfigure(configure: DvrConfigure) {
-        mConfigureUpdater.updateConfigure(configure)
+        mQnxServerMonitor.updateConfigure(configure)
         mDvrConfigure = configure
     }
 
@@ -203,11 +213,27 @@ internal class DvrLauncher(
         mWorkaround.process(file)
     }
 
-    private fun systemCheck() {
-        val file: File? = if (mDeviceDetect.mountedFolder != null) {
-            File(mDeviceDetect.mountedFolder, TARGET_FOLDER_NAME).apply { if (!exists()) mkdirs() }
-        } else {
-            null
+    private fun stateUpdate(
+        isFlashMounted: Boolean = mDeviceDetect.mountedFolder != null,
+        isQnxServerActive: Boolean = mQnxServerMonitor.isActive
+    ) {
+        var isActive = true
+        var errorType: DvrState.ErrorType = DvrState.ErrorType.None
+
+        if (!isFlashMounted) {
+            isActive = false
+            errorType = DvrState.ErrorType.FlashDriveNotAvailable
         }
+
+        if (!isQnxServerActive) {
+            isActive = false
+            errorType = DvrState.ErrorType.InRestart
+        }
+
+        mDvrConfigure = mQnxServerMonitor.configure
+
+        mServiceState = DvrState(isActive, errorType)
+
+        Log.d("DvrLauncher", "$isFlashMounted, $isQnxServerActive, $mServiceState")
     }
 }

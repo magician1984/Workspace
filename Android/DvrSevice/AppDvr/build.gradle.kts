@@ -33,6 +33,9 @@ android {
             useSupportLibrary = true
         }
 
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
 
     }
 
@@ -61,6 +64,16 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
+    flavorDimensions += listOf("prototype")
+    productFlavors {
+        create("mock") {
+            dimension = "prototype"
+        }
+        create("real") {
+            dimension = "prototype"
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.auo.dvr_ui.utils
+package com.auo.dvr
 
 import android.content.Context
 import com.auo.dvr_core.CamLocation
@@ -14,7 +14,7 @@ import com.auo.dvr_core.RecordResolution
 import com.auo.dvr_core.RecordType
 import java.io.File
 
-class MockService(private val context: Context) : IDvrService.Stub() {
+class ServiceApiImpl(private val context: Context) : DvrService.IServiceApi() {
     private val mRecordFiles = mutableListOf<RecordFile>()
 
     private val mListeners = mutableListOf<OnRecordUpdateListener>()
@@ -52,6 +52,10 @@ class MockService(private val context: Context) : IDvrService.Stub() {
             )
             mRecordFiles.add(recordFile)
         }
+    }
+
+    override fun updateState(state: DvrState) {
+
     }
 
     override fun getRecordFiles(): MutableList<RecordFile> {

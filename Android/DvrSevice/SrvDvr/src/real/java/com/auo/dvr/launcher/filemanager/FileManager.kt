@@ -175,7 +175,7 @@ internal class FileManager internal constructor(private val injector: FileManage
                     recordUpdateListener?.onUpdate()
                 }
             }
-        } else {
+        } else if(eventType == DvrLauncher.IFileManager.EventType.Create){
             if (type == DvrLauncher.IFileManager.FileType.Record) {
                 val recordFileBundle: RecordFileBundle = mParser.parseRecord(file)
                 mCurrentRecordFile[recordFileBundle.location] = recordFileBundle

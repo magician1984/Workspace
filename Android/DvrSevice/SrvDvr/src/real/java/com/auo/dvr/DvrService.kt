@@ -9,8 +9,8 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.auo.dvr.data.UserIntent
 import com.auo.dvr.launcher.DvrLauncher
-import com.auo.dvr.launcher.configure.ConfigureUpdater
 import com.auo.dvr.launcher.detector.UsbDetector
+import com.auo.dvr.launcher.monitor.QNXServerMonitor
 import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrException
 import com.auo.dvr_core.DvrState
@@ -18,53 +18,54 @@ import com.auo.dvr_core.IDvrService
 import java.io.File
 
 class DvrService : Service() {
-    interface IDvrLauncher{
+    interface IDvrLauncher {
 
-        fun interface OnServiceStateUpdateListener{
+        fun interface OnServiceStateUpdateListener {
             fun onStateUpdate(state: DvrState)
         }
 
-        fun interface OnConfigureUpdateListener{
+        fun interface OnConfigureUpdateListener {
             fun onConfigureUpdate(configure: DvrConfigure)
         }
 
-        var onServiceStateUpdateListener : OnServiceStateUpdateListener?
+        var onServiceStateUpdateListener: OnServiceStateUpdateListener?
 
-        var onConfigureUpdateListener : OnConfigureUpdateListener?
+        var onConfigureUpdateListener: OnConfigureUpdateListener?
 
-        fun<R> handleUserIntent(intent : UserIntent<R>) : R
+        fun <R> handleUserIntent(intent: UserIntent<R>): R
 
         fun release()
     }
 
 
-    abstract class IServiceApi(protected val mDvrLauncher: IDvrLauncher) : IDvrService.Stub(){
+    abstract class IServiceApi(protected val mDvrLauncher: IDvrLauncher) : IDvrService.Stub() {
         abstract fun updateState(state: DvrState)
     }
 
     private lateinit var mServiceApi: IServiceApi
 
-    private lateinit var mDvrLauncher : IDvrLauncher
+    private lateinit var mDvrLauncher: IDvrLauncher
 
-    private var isInitialized : Boolean = false
+    private var isInitialized: Boolean = false
 
     override fun onCreate() {
-        try{
+        try {
             Log.d("DvrService", "onCreate:")
-            val sourceFolder = File(getExternalFilesDir(null), "Dvr_src")
+            val sourceFolder = File("/mnt/nfs", "Dvr_src")
 
-            if(!sourceFolder.exists())
+            if (!sourceFolder.exists())
                 sourceFolder.mkdirs()
 
-            mDvrLauncher = DvrLauncher(this, sourceFolder, UsbDetector(this), ConfigureUpdater(sourceFolder, this))
-
+            mDvrLauncher = DvrLauncher(
+                this, sourceFolder, UsbDetector(this), QNXServerMonitor(sourceFolder)
+            )
 
             mServiceApi = ServiceApiImpl(mDvrLauncher)
 
             isInitialized = true
 
             Log.d("DvrService", "onCreate: initialized")
-        }catch (e : DvrException){
+        } catch (e: DvrException) {
             Log.e("DvrService", "onCreate: ", e)
         }
     }
@@ -82,7 +83,7 @@ class DvrService : Service() {
         val notification = NotificationCompat.Builder(this, "Dvr")
             .setContentTitle("Service Running")
             .setContentText("This service runs on boot")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.baseline_directions_car_24)
             .build()
         startForeground(1, notification)
         return super.onStartCommand(intent, flags, startId)

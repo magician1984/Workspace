@@ -12,6 +12,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
+
     }
 
     buildTypes {
@@ -33,6 +38,15 @@ android {
     buildFeatures{
         aidl = true
     }
+    flavorDimensions += listOf("prototype")
+    productFlavors {
+        create("mock") {
+            dimension = "prototype"
+        }
+        create("real") {
+            dimension = "prototype"
+        }
+    }
 }
 
 dependencies {
@@ -41,7 +55,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(project(":LibDvrCore"))
-    implementation(libs.ffmpeg.kit.full)
+    "realImplementation"(libs.ffmpeg.kit.full)
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.kotlin)

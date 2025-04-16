@@ -7,9 +7,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.annotation.RestrictTo
 import com.auo.dvr.DvrService
 import com.auo.dvr_core.IDvrService
 import com.auo.dvr_ui.datasource.Datasource
@@ -27,8 +25,6 @@ import com.auo.dvr_ui.usecase.UseCaseRegisterListener
 import com.auo.dvr_ui.usecase.UseCaseSetConfigure
 import com.auo.dvr_ui.usecase.UseCaseUnlockFile
 import com.auo.dvr_ui.usecase.UseCaseUnmountStorage
-import com.auo.dvr_ui.utils.MockService
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
@@ -59,14 +55,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun initializeService() {
-        initMockService()
-    }
-
-    private fun initMockService(){
-        mService = MockService(this)
-    }
-
-    private fun initDvrService(){
         val intent = Intent(this, DvrService::class.java)
         bindService(intent, object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
