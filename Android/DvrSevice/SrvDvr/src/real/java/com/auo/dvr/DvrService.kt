@@ -28,9 +28,15 @@ class DvrService : Service() {
             fun onConfigureUpdate(configure: DvrConfigure)
         }
 
+        fun interface OnRecordUpdateListener {
+            fun onRecordUpdate()
+        }
+
         var onServiceStateUpdateListener: OnServiceStateUpdateListener?
 
         var onConfigureUpdateListener: OnConfigureUpdateListener?
+
+        var onRecordUpdateListener: OnRecordUpdateListener?
 
         fun <R> handleUserIntent(intent: UserIntent<R>): R
 

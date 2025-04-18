@@ -79,9 +79,9 @@ internal class QNXServerMonitor(folder: File) : DvrLauncher.IQNXServerMonitor {
 
         val lines = mLockFile.readLines()
 
-        val duration = lines.find { it.startsWith(KEY_DURATION) }?.substringAfter(":")?.toLong() ?: return null
+        val duration = lines.find { it.startsWith(KEY_DURATION) }?.substringAfter(":")?.trim()?.toLong() ?: return null
 
-        val resolution = lines.find { it.startsWith(KEY_RESOLUTION) }?.substringAfter(":")?.toInt() ?: return null
+        val resolution = lines.find { it.startsWith(KEY_RESOLUTION) }?.substringAfter(":")?.trim()?.toInt() ?: return null
 
         return DvrConfigure(RecordDuration.entries.find { it.value == duration }!!, RecordResolution.entries.find { it.value == resolution }!!)
     }

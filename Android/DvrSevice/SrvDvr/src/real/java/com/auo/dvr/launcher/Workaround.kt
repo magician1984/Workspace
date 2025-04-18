@@ -2,24 +2,37 @@ package com.auo.dvr.launcher
 
 import android.util.Log
 import com.arthenica.ffmpegkit.FFmpegKit
+import com.auo.dvr.launcher.DvrLauncher.IFileManager.EventType
 import java.io.File
 import java.util.concurrent.Executors
 
-class Workaround {
+internal class Workaround {
     companion object{
         private const val WORKAROUND_FILE_EXTENSION = "h265"
         private const val RECORD_FILE_EXTENSION = "mp4"
+        private const val EVENT_FILE_EXTENSION = "evt"
     }
+
+    var mOut : DvrLauncher.IFileManager? = null
 
     private val executor = Executors.newFixedThreadPool(1)
 
-
-
-    fun process(file: File){
-        executor.execute(WorkaroundTask(file))
+    fun process(file: File, immediate : Boolean = false){
+        executor.execute(WorkaroundTask(file, immediate))
     }
 
-    private class WorkaroundTask(val file: File) : Runnable{
+    fun onEvent(event: EventType, file: File){
+        if(file.extension == WORKAROUND_FILE_EXTENSION){
+            if(event == EventType.Exist || event == EventType.Create)
+                process(file, event == EventType.Exist)
+        }else if(file.extension == EVENT_FILE_EXTENSION){
+            mOut?.onFileUpdate(eventType = event, type = DvrLauncher.IFileManager.FileType.Event, file = file)
+        }
+    }
+
+    private inner class WorkaroundTask(val file: File, val immediate : Boolean = false) : Runnable{
+        private var retryCount : Int = 0
+
         override fun run() {
             Log.d("Workaround", "process: file = ${file.absolutePath}")
 
@@ -33,24 +46,52 @@ class Workaround {
                 file.name.replace(WORKAROUND_FILE_EXTENSION, RECORD_FILE_EXTENSION)
             )
 
-            val command = listOf(
-                "-re",                           // read input in real time (simulates device)
-                "-f", "hevc",                    // raw H.265 stream
-                "-i", file.absolutePath,         // input file
-                "-c:v", "copy",                  // no re-encoding
+            if(immediate){
+                Thread.sleep(1000)
+            }
+
+            val command = listOfNotNull(
+                if (!immediate) "-re" else null,
+                "-f", "hevc",
+                "-i", file.absolutePath,
+                "-c:v", "copy",
                 "-movflags", "+frag_keyframe+empty_moov+default_base_moof+faststart",
                 outputFile.absolutePath
             ).joinToString(" ") { "\"$it\"" }
 
             Log.d("Workaround", "FFmpeg command: $command")
 
+            mOut?.onFileUpdate(eventType = EventType.Create, type = DvrLauncher.IFileManager.FileType.Record, file = outputFile)
+
             val ret = FFmpegKit.execute(command)
+
+
+
+            if(outputFile.exists()){
+                outputFile.setReadable(true, false)
+                outputFile.setWritable(true, false)
+            }
 
             Log.d("Workaround", "process: ret = ${ret.returnCode}")
 
-            file.delete()
+            if(ret.returnCode.isValueSuccess){
+                mOut?.onFileUpdate(eventType = EventType.Close, type = DvrLauncher.IFileManager.FileType.Record, file = outputFile)
+                file.delete()
+            }else{
+                if(outputFile.exists()){
+                    outputFile.delete()
+                }
+                if(retryCount < 3){
+                    Log.e("Workaround", "process: retryCount = $retryCount")
+                    retryCount++
+                    executor.execute(this)
+                }else{
+                    Log.e("Workaround", "process: retryCount > 3")
+                }
+            }
 
-            Thread.sleep(500)
+
+            Thread.sleep(1000)
         }
     }
 }

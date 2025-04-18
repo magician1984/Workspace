@@ -44,6 +44,8 @@ internal class FileManager internal constructor(private val injector: FileManage
         val operator: IOperatorMethods
         val reverseParser: IReverseParser
 
+        var onFileUpdateListener : (()->Unit)?
+
         fun init()
         fun release() {}
         fun clean()
@@ -98,6 +100,10 @@ internal class FileManager internal constructor(private val injector: FileManage
 
         mRepo.init()
         mEventHandler.onComplete = ::handleEvent
+
+        mRepo.onFileUpdateListener = {
+            recordUpdateListener?.onUpdate()
+        }
 
         mIsInitialized = true
     }

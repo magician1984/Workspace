@@ -117,8 +117,8 @@ class Presenter(
 
         findUseCase<IUseCaseRegisterListener>()?.invoke {
             backgroundScope.launch {
+                Log.d("Presenter", "onUpdate: ${it.size}")
                 state = state.copy(fileList = State.parseList(it, state.isProtected))
-
             }
         }
 

@@ -21,6 +21,8 @@ internal class BufferedRepo(override val root: File,
     override val files: List<RecordFileBundle>
         get() = _files
 
+    override var onFileUpdateListener: (() -> Unit)? = null
+
     private val _files : MutableList<RecordFileBundle> = mutableListOf()
 
     override fun init() {
@@ -83,6 +85,8 @@ internal class BufferedRepo(override val root: File,
         operator.move(file.file!!, fileInfo.file, false)
 
         _files.add(file.copy(info = fileInfo))
+
+        onFileUpdateListener?.invoke()
     }
 
     override fun remove(id: Int) {
@@ -92,6 +96,7 @@ internal class BufferedRepo(override val root: File,
 
         _files.remove(file)
 
+        onFileUpdateListener?.invoke()
     }
 
     override fun get(id: Int): RecordFileBundle {
@@ -118,6 +123,8 @@ internal class BufferedRepo(override val root: File,
         Log.d("BufferedRepo", "lock: ${recordFile.file!!.absolutePath} -> ${fileInfo.file.absolutePath}")
 
         _files[index] = recordFile.copy(recordFile = recordFile.recordFile.copy(type = RecordType.Locked), info = fileInfo)
+
+        onFileUpdateListener?.invoke()
     }
 
     override fun unlock(file: RecordFileBundle){
@@ -140,6 +147,8 @@ internal class BufferedRepo(override val root: File,
         Log.d("BufferedRepo", "unlock: ${recordFile.file!!.absolutePath} -> ${fileInfo.file.absolutePath}")
 
         _files[index] = recordFile.copy(recordFile = recordFile.recordFile.copy(type = RecordType.Normal), info = fileInfo)
+
+        onFileUpdateListener?.invoke()
     }
 
     override fun export(file: RecordFileBundle, dest: File) {

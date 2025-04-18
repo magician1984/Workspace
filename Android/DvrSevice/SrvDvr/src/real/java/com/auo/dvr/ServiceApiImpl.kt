@@ -43,6 +43,12 @@ class ServiceApiImpl(dvrLauncher: DvrService.IDvrLauncher) : DvrService.IService
         mDvrLauncher.onConfigureUpdateListener = DvrService.IDvrLauncher.OnConfigureUpdateListener { configure ->
             mConfigure = configure
         }
+
+        mDvrLauncher.onRecordUpdateListener = DvrService.IDvrLauncher.OnRecordUpdateListener {
+            mRecordUpdateListeners.forEach {
+                it.onUpdate()
+            }
+        }
     }
 
     override fun updateState(state: DvrState) {
