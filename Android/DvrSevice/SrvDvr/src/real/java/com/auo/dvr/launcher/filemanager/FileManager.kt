@@ -27,9 +27,10 @@ internal class FileManager internal constructor(private val injector: FileManage
         var onComplete: ((File) -> Unit)?
         fun handleEvent(
             event: RecordFileBundle,
-            writingFile: RecordFileBundle,
             previousFileBundle: RecordFileBundle?
         )
+
+        fun pushFile(file : RecordFileBundle)
     }
 
     interface IOperatorMethods {
@@ -171,12 +172,13 @@ internal class FileManager internal constructor(private val injector: FileManage
                         val previousFileBundle = mRepo.files.filter { item ->
                             item.location == this.location
                         }.maxByOrNull { it.createTime }
-                        mEventHandler.handleEvent(this, currentFileBundle, previousFileBundle)
+                        mEventHandler.handleEvent(this, previousFileBundle)
                     }
                 }
 
                 DvrLauncher.IFileManager.FileType.Record -> {
                     val recordFileBundle: RecordFileBundle = mParser.parseRecord(file)
+                    mEventHandler.pushFile(recordFileBundle)
                     mRepo.add(recordFileBundle)
                     recordUpdateListener?.onUpdate()
                 }

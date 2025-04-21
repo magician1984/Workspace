@@ -140,6 +140,7 @@ internal class DvrLauncher(
 
     override fun <R> handleUserIntent(intent: UserIntent<R>): R {
         Log.d("DvrLauncher", "handleUserIntent: $intent, $mFileManager")
+
         val result = when (intent) {
             is UserIntent.CopyRecord -> mFileManager?.copyFile(intent.recordFile, intent.destPath)
             is UserIntent.DeleteRecord -> mFileManager?.deleteFile(intent.recordFile)
@@ -153,6 +154,7 @@ internal class DvrLauncher(
         } ?: Unit
 
         return result as R
+
     }
 
 
@@ -177,7 +179,8 @@ internal class DvrLauncher(
 
         mFileManager?.init()
 
-        mFileManager?.recordUpdateListener = IFileManager.RecordUpdateListener { onRecordUpdateListener?.onRecordUpdate() }
+        mFileManager?.recordUpdateListener =
+            IFileManager.RecordUpdateListener { onRecordUpdateListener?.onRecordUpdate() }
 
         mWorkaround.mOut = mFileManager
 

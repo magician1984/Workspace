@@ -12,27 +12,45 @@ import java.util.concurrent.Executors
 
 internal class EventHandler(private val mTmpFolder: File) : FileManager.IEventHandler {
     companion object{
-        private const val DURATION_BEFORE_EVENT_SEC = 30
-        private const val DURATION_AFTER_EVENT_SEC = 60
+        private const val DURATION_BEFORE_EVENT_SEC = 15
+        private const val DURATION_AFTER_EVENT_SEC = 15
     }
 
     override var onComplete: ((File) -> Unit)? = null
 
     private val mExecutorService = Executors.newFixedThreadPool(CamLocation.entries.size)
 
+    private val waitingTask = hashMapOf<CamLocation, EventHandleTask>()
+
     override fun handleEvent(
         event: RecordFileBundle,
-        writingFile: RecordFileBundle,
         previousFileBundle: RecordFileBundle?
     ) {
-        mExecutorService.submit(EventHandleTask(event, writingFile, previousFileBundle))
+        if(waitingTask.containsKey(event.location))
+            return
+
+        waitingTask[event.location] = EventHandleTask(event, previousFileBundle)
     }
+
+    override fun pushFile(file: RecordFileBundle) {
+        if(!waitingTask.containsKey(file.location))
+            return
+
+        waitingTask[file.location]?.setFile(file)
+        mExecutorService.execute(waitingTask[file.location]!!)
+    }
+
 
     private inner class EventHandleTask(
         val event: RecordFileBundle,
-        val writingFile: RecordFileBundle,
         val previousFileBundle: RecordFileBundle?
     ) : Runnable {
+        private lateinit var writingFile : RecordFileBundle
+
+        fun setFile(file: RecordFileBundle){
+            writingFile = file
+        }
+
         override fun run() {
             Log.d("EventHandler", "handleEvent: ${event.name}")
             val eventTime = (event.info as? EventInfo)?.time
@@ -123,6 +141,8 @@ internal class EventHandler(private val mTmpFolder: File) : FileManager.IEventHa
             if (ret.returnCode.isValueSuccess) {
                 onComplete?.invoke(file)
             }
+
+            waitingTask.remove(event.location)
         }
     }
 }

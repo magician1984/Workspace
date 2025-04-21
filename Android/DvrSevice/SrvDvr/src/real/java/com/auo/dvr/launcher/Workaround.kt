@@ -4,7 +4,12 @@ import android.util.Log
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.auo.dvr.launcher.DvrLauncher.IFileManager.EventType
 import java.io.File
+import java.io.FileOutputStream
+import java.io.RandomAccessFile
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.Condition
+import java.util.concurrent.locks.ReentrantLock
 
 internal class Workaround {
     companion object{
@@ -15,6 +20,8 @@ internal class Workaround {
 
     var mOut : DvrLauncher.IFileManager? = null
 
+    private val nonClosedFile = mutableListOf<File>()
+
     private val executor = Executors.newFixedThreadPool(1)
 
     fun process(file: File, immediate : Boolean = false){
@@ -23,8 +30,19 @@ internal class Workaround {
 
     fun onEvent(event: EventType, file: File){
         if(file.extension == WORKAROUND_FILE_EXTENSION){
-            if(event == EventType.Exist || event == EventType.Create)
-                process(file, event == EventType.Exist)
+            when (event) {
+                EventType.Exist -> {
+                    process(file, true)
+                }
+                EventType.Create -> {
+                    process(file, false)
+                    nonClosedFile.add(file)
+                }
+                EventType.Close -> {
+                    nonClosedFile.remove(file)
+                }
+                else->{}
+            }
         }else if(file.extension == EVENT_FILE_EXTENSION){
             mOut?.onFileUpdate(eventType = event, type = DvrLauncher.IFileManager.FileType.Event, file = file)
         }
@@ -47,7 +65,7 @@ internal class Workaround {
             )
 
             if(immediate){
-                Thread.sleep(1000)
+                Thread.sleep(100)
             }
 
             val command = listOfNotNull(
@@ -64,8 +82,6 @@ internal class Workaround {
             mOut?.onFileUpdate(eventType = EventType.Create, type = DvrLauncher.IFileManager.FileType.Record, file = outputFile)
 
             val ret = FFmpegKit.execute(command)
-
-
 
             if(outputFile.exists()){
                 outputFile.setReadable(true, false)
@@ -90,8 +106,7 @@ internal class Workaround {
                 }
             }
 
-
-            Thread.sleep(1000)
+            Thread.sleep(100)
         }
     }
 }
