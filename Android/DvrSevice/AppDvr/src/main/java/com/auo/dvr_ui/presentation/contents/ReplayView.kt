@@ -5,10 +5,12 @@ import android.util.Log
 import android.view.SurfaceView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -16,8 +18,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -27,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,7 +40,6 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.Player.Listener
 import androidx.media3.exoplayer.ExoPlayer
-import com.auo.dvr_core.RecordType
 import com.auo.dvr_ui.R
 import com.auo.dvr_ui.presentation.IUserIntents
 import com.auo.dvr_ui.presentation.Presenter
@@ -64,8 +68,7 @@ internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Prese
         val isPlaying: Boolean,
         val isPause: Boolean,
         val isLoading: Boolean,
-        val duration: Long,
-        val playingFile: File?
+        val duration: Long
     )
 
     private val _mReplayState = mutableStateOf(
@@ -74,14 +77,17 @@ internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Prese
             isPlaying = false,
             isPause = false,
             isLoading = false,
-            0L,
-            null
+            0L
         )
     )
 
     private var mReplayState by _mReplayState
 
-    private var mPlayer: Player? = null
+    private val _mPlayerInitialized = mutableStateOf(false)
+
+    private var mPlayerInitialized by _mPlayerInitialized
+
+    private lateinit var mPlayer: Player
 
     private val dateFormat: SimpleDateFormat = SimpleDateFormat(TIME_FORMAT, Locale.getDefault())
 
@@ -90,33 +96,51 @@ internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Prese
         modifier: Modifier,
         state: Presenter.State
     ) {
-        val mRecord = state.selectedFile
 
-        LaunchedEffect(key1 = mRecord) {
-            if (mRecord != null) {
-                if (!mReplayState.isEnable)
-                    mReplayState = mReplayState.copy(isEnable = true)
+        val mContext = LocalContext.current
+        // Init player
+        LaunchedEffect(LocalContext.current) {
+            mPlayer = ExoPlayer.Builder(mContext).build()
 
-                if (mReplayState.playingFile != mRecord.cacheFile) {
-                    mReplayState = mReplayState.copy(
-                        playingFile = mRecord.cacheFile,
-                        isPause = false,
-                        duration = if (mRecord.type == RecordType.Protected) EVENT_DURATION_MILLI else NORMAL_DURATION_MILLI
-                    )
-                    if (mReplayState.isLoading)
-                        handleIntent(ControlIntent.Play)
-                    else
-                        handleIntent(ControlIntent.Stop)
+            mPlayer.addListener(object : Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    super.onIsPlayingChanged(isPlaying)
+                    Log.d("ReplayView", "onIsPlayingChanged: $isPlaying")
+                    updateReplayState(isPlaying = isPlaying, isPause = !isPlaying)
                 }
-            } else {
-                mReplayState = mReplayState.copy(
-                    isEnable = false,
-                    isLoading = false,
-                    isPause = false,
-                    duration = 0L,
-                    playingFile = null
-                )
-                handleIntent(ControlIntent.Stop)
+
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    super.onPlaybackStateChanged(playbackState)
+                    Log.d("ReplayView", "onPlaybackStateChanged: $playbackState")
+                    if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
+                        updateReplayState(isPlaying = false, isPause = false, duration = 0L)
+                    }
+                }
+            })
+
+            mPlayerInitialized = true
+        }
+
+        // Release player
+        DisposableEffect(LocalContext.current) {
+            onDispose {
+                mPlayer.release()
+                mPlayerInitialized = false
+            }
+        }
+
+        LaunchedEffect(mPlayerInitialized, state) {
+            if (mPlayerInitialized) {
+                Log.d("ReplayView", "State: $state")
+                val file = state.playingFile
+
+                updateReplayState(isEnable = state.selectedFile != null, isLoading = file != null)
+
+                if (file == null) {
+                    stop()
+                }else{
+                    play(file)
+                }
             }
         }
 
@@ -125,7 +149,8 @@ internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Prese
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
-                    .background(color = Color.Blue)
+                    .background(color = Color.Blue),
+                replayState = mReplayState
             )
             Spacer(modifier = Modifier.height(16.dp))
             ControlBar(
@@ -138,30 +163,21 @@ internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Prese
     }
 
     @Composable
-    private fun VideoView(modifier: Modifier) {
-        AndroidView(modifier = modifier, factory = { context ->
-            SurfaceView(context).apply {
-                val view = this
-                mPlayer = ExoPlayer.Builder(context).build()
-                mPlayer!!.setVideoSurfaceView(this)
-                mPlayer!!.addListener(object : Listener {
-                    override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        super.onIsPlayingChanged(isPlaying)
-                        Log.d("ReplayView", "onIsPlayingChanged: $isPlaying")
-                        mReplayState = mReplayState.copy(isPlaying = isPlaying)
-                    }
-
-                    override fun onPlaybackStateChanged(playbackState: Int) {
-                        super.onPlaybackStateChanged(playbackState)
-                        Log.d("ReplayView", "onPlaybackStateChanged: $playbackState")
-                        if(playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED){
-                            mReplayState = mReplayState.copy(isPlaying = false, isPause = false)
-                        }
-
+    private fun VideoView(modifier: Modifier, replayState: ReplayState) {
+        Box(modifier = modifier) {
+            if(mPlayerInitialized){
+                AndroidView(factory = { context ->
+                    SurfaceView(context).apply {
+                        mPlayer.setVideoSurfaceView(this)
                     }
                 })
             }
-        })
+
+            if(!replayState.isLoading){
+                Surface(modifier = Modifier.fillMaxSize().background(Color.Black)) {  }
+            }
+        }
+
     }
 
     @Composable
@@ -170,53 +186,37 @@ internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Prese
         state: ReplayState,
         onEvent: (ControlIntent) -> Unit
     ) {
-        Column(
-            modifier = modifier.padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            TimeInfo(isPlaying = state.isPlaying, duration = state.duration, onEvent = onEvent)
-            Buttons(isEnable = state.isEnable, isPlaying = state.isPlaying, onEvent = onEvent)
-        }
-    }
 
-    @Composable
-    private fun TimeInfo(
-        modifier: Modifier = Modifier,
-        isPlaying: Boolean,
-        duration: Long,
-        onEvent: (ControlIntent) -> Unit
-    ) {
         var currentTime by remember {
             mutableLongStateOf(0L)
         }
 
-
-        LaunchedEffect(key1 = isPlaying) {
-            while (isPlaying) {
+        LaunchedEffect(key1 = state) {
+            while (state.isPlaying) {
                 delay(300)
-                currentTime = mPlayer?.currentPosition ?: 0L
+                currentTime = mPlayer.currentPosition
             }
-            if (!mReplayState.isPause)
+
+            if (!state.isLoading)
                 currentTime = 0L
         }
 
-        LaunchedEffect(key1 = mPlayer?.playbackState) {
-            if (mPlayer?.playbackState == Player.STATE_ENDED)
-                currentTime = 0L
+        Column(
+            modifier = modifier.padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(modifier = Modifier, text = dateFormat.format(Date(currentTime)), fontSize = 32.sp)
+                Slider(
+                    modifier = Modifier,
+                    value = currentTime.toFloat(),
+                    valueRange = 0f..state.duration.toFloat().coerceAtLeast(0f),
+                    onValueChange = {
+                        onEvent(ControlIntent.SeekTo(it.toLong()))
+                    })
+            }
+            Buttons(isEnable = state.isEnable, isPlaying = state.isPlaying, onEvent = onEvent)
         }
-
-
-        Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(modifier = Modifier, text = dateFormat.format(Date(currentTime)), fontSize = 32.sp)
-            Slider(
-                modifier = Modifier,
-                value = currentTime.toFloat(),
-                valueRange = 0f..duration.toFloat().coerceAtLeast(0f),
-                onValueChange = {
-                    onEvent(ControlIntent.SeekTo(it.toLong()))
-                })
-        }
-
     }
 
     @Composable
@@ -257,38 +257,68 @@ internal class ReplayView(override val onIntent: (IUserIntents) -> Unit) : Prese
     }
 
     private fun handleIntent(intent: ControlIntent) {
-        Log.d("ReplayView", "handleIntent: $intent")
+        Log.d("ReplayView", "handleIntent: $intent, ReplayState: $mReplayState")
         when (intent) {
             ControlIntent.Pause -> {
-                mReplayState = mReplayState.copy(isPause = true)
-                mPlayer?.pause()
+                pause()
             }
 
             ControlIntent.Play -> {
-                if (mReplayState.isPause) {
-                    mReplayState = mReplayState.copy(isPause = false)
-                    mPlayer?.play()
-                } else if (mReplayState.playingFile != null) {
-                    mReplayState = mReplayState.copy(isLoading = false)
-                    playFile(mPlayer!!, mReplayState.playingFile!!)
-                } else {
-                    mReplayState = mReplayState.copy(isLoading = true)
-                    onIntent(IUserIntents.ReplayFile)
+                if(mReplayState.isLoading){
+                    resume()
+                }else{
+                    onIntent(IUserIntents.RequestPlayFile)
                 }
             }
 
-            is ControlIntent.SeekTo -> mPlayer?.seekTo(intent.value)
-            ControlIntent.Stop -> {
-                mPlayer?.stop()
-            }
+            is ControlIntent.SeekTo -> mPlayer.seekTo(intent.value)
+            ControlIntent.Stop -> onIntent(IUserIntents.ReleasePlayFile)
         }
     }
 
-    private fun playFile(player: Player, file: File) {
+    private fun play(file: File) {
+        if(mPlayer.isPlaying)
+            return
+        Log.d("Player", "Play called")
         val mediaItem: MediaItem = MediaItem.fromUri(Uri.fromFile(file))
-        player.setMediaItem(mediaItem)
-        player.prepare()
-        Log.d("ReplayView", "Duration : ${player.duration}")
-        player.play()
+        mPlayer.setMediaItem(mediaItem)
+        mPlayer.prepare()
+        Log.d("ReplayView", "Duration : ${mPlayer.duration}")
+        mPlayer.play()
+    }
+
+    private fun pause(){
+        Log.d("Player", "Pause called")
+        mPlayer.pause()
+    }
+
+    private fun resume(){
+        Log.d("Player", "Resume calles")
+        mPlayer.play()
+    }
+
+    private fun stop(){
+        Log.d("Player", "Stop called")
+        mPlayer.stop()
+    }
+
+    private fun updateReplayState(
+        isEnable: Boolean = mReplayState.isEnable,
+        isPlaying: Boolean = mReplayState.isPlaying,
+        isPause: Boolean = mReplayState.isPause,
+        isLoading: Boolean = mReplayState.isLoading,
+        duration: Long = mReplayState.duration
+    ) {
+        Log.d(
+            "ReplayView",
+            "Update state: $isEnable, $isPlaying, $isPause, $isLoading, $duration"
+        )
+        mReplayState = mReplayState.copy(
+            isEnable = isEnable,
+            isPlaying = isPlaying,
+            isPause = isPause,
+            isLoading = isLoading,
+            duration = duration
+        )
     }
 }

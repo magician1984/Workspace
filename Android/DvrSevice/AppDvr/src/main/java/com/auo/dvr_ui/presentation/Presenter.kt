@@ -55,6 +55,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.io.File
 
 class Presenter(
     private val renderer: ComponentActivity
@@ -72,6 +73,7 @@ class Presenter(
         val selectedFile: RecordFileData?,
         val camLocation: CamLocation,
         val isProtected: Boolean,
+        val playingFile: File?,
         val effect: Effect?
     ) {
         companion object {
@@ -105,7 +107,7 @@ class Presenter(
     private val mReplayView: IView = ReplayView(::onIntent)
 
     private val _state: MutableState<State> =
-        mutableStateOf(State(mutableStateListOf(), null, CamLocation.Front, false, null))
+        mutableStateOf(State(mutableStateListOf(), null, CamLocation.Front, false, null, null))
 
     private var state by _state
 
@@ -118,7 +120,7 @@ class Presenter(
         findUseCase<IUseCaseRegisterListener>()?.invoke {
             backgroundScope.launch {
                 Log.d("Presenter", "onUpdate: ${it.size}")
-                state = state.copy(fileList = State.parseList(it, state.isProtected))
+                updateState(fileList = State.parseList(it, state.isProtected))
             }
         }
 
@@ -132,7 +134,7 @@ class Presenter(
                 else
                     emptyList()
 
-                state = state.copy(
+                updateState(
                     fileList = State.parseList(fileList, state.isProtected),
                     effect = errorEffect
                 )
@@ -145,10 +147,14 @@ class Presenter(
 
             LaunchedEffect(key1 = LocalContext.current) {
                 findUseCase<IUseCaseGetDvrState>()?.invoke()?.let { dvrState ->
-                    val effect = if(!dvrState.isAvailable) Effect.OnError(dvrState.errorMessage ?: "") else null
-                    val fileList = if(dvrState.isAvailable) findUseCase<IUseCaseGetListFiles>()?.invoke() ?: emptyList() else emptyList()
+                    val effect = if (!dvrState.isAvailable) Effect.OnError(
+                        dvrState.errorMessage ?: ""
+                    ) else null
+                    val fileList =
+                        if (dvrState.isAvailable) findUseCase<IUseCaseGetListFiles>()?.invoke()
+                            ?: emptyList() else emptyList()
                     Log.d("Presenter", "Effect : $effect, List size : ${fileList.size}")
-                    state = state.copy(State.parseList(fileList, state.isProtected), effect = effect)
+                    updateState(State.parseList(fileList, state.isProtected), effect = effect)
                 }
             }
 
@@ -220,58 +226,61 @@ class Presenter(
                 is IUserIntents.DeleteFile -> {
                     findUseCase<IUseCaseDeleteFile>()?.invoke(intent.file)
                     if (intent.file.id == state.selectedFile?.id)
-                        state = state.copy(selectedFile = null)
+                        updateState(selectedFile = null)
                 }
 
                 is IUserIntents.LockFile -> findUseCase<IUseCaseLockFile>()?.invoke(intent.file)
-                is IUserIntents.SelectFile -> state = state.copy(selectedFile = intent.file)
+                is IUserIntents.SelectFile -> updateState(selectedFile = intent.file, playingFile = null)
                 is IUserIntents.UnlockFile -> findUseCase<IUseCaseUnlockFile>()?.invoke(intent.file)
-                is IUserIntents.ViewCameraLocation -> state =
-                    state.copy(camLocation = intent.camLocation, selectedFile = null)
+                is IUserIntents.ViewCameraLocation -> updateState(
+                    camLocation = intent.camLocation,
+                    selectedFile = null
+                )
 
                 IUserIntents.ViewNormal -> {
                     val fileList = findUseCase<IUseCaseGetListFiles>()?.invoke()
                         ?.filter { it.type != RecordType.Protected } ?: emptyList()
 
-                    state =
-                        state.copy(fileList = mutableStateListOf<RecordFileData>().apply {
-                            addAll(
-                                fileList
-                            )
-                        }, isProtected = false, selectedFile = null)
+                    updateState(
+                        fileList = State.parseList(fileList, false),
+                        isProtected = false,
+                        selectedFile = null
+                    )
                 }
 
                 IUserIntents.ViewProtected -> {
                     val fileList = findUseCase<IUseCaseGetListFiles>()?.invoke()
                         ?.filter { it.type == RecordType.Protected } ?: emptyList()
-                    state =
-                        state.copy(fileList = mutableStateListOf<RecordFileData>().apply {
-                            addAll(
-                                fileList
-                            )
-                        }, isProtected = true, selectedFile = null)
+                    updateState(
+                        fileList = State.parseList(fileList, true),
+                        isProtected = true,
+                        selectedFile = null
+                    )
                 }
 
-                IUserIntents.UnselectFile -> state = state.copy(selectedFile = null)
-                is IUserIntents.ReplayFile -> {
+                IUserIntents.UnselectFile -> state = state.copy(selectedFile = null, playingFile = null)
+                is IUserIntents.RequestPlayFile -> {
                     val cacheFile = findUseCase<IUseCaseGetCacheFile>()?.invoke(
                         state.selectedFile ?: return@launch
                     ) ?: return@launch
-                    val recordFileData = state.selectedFile!!.copy(cacheFile = cacheFile)
-                    state = state.copy(selectedFile = recordFileData)
+
+                    updateState(playingFile = cacheFile)
+                }
+                is IUserIntents.ReleasePlayFile -> {
+                    updateState(playingFile = null)
                 }
 
                 is IUserIntents.ConfirmDeleteFile -> {
-                    state = state.copy(effect = Effect.OnRemoveProtectedFile(intent.file))
+                    updateState(effect = Effect.OnRemoveProtectedFile(intent.file))
                 }
 
                 IUserIntents.ConfirmUnmountStorage -> {
-                    state = state.copy(effect = Effect.OnUnmountStorage)
+                    updateState(effect = Effect.OnUnmountStorage)
                 }
 
                 IUserIntents.OpenSettings -> {
                     val configure = findUseCase<IUseCaseGetConfigure>()?.invoke() ?: return@launch
-                    state = state.copy(effect = Effect.OnSetting(configure))
+                    updateState(effect = Effect.OnSetting(configure))
                 }
 
                 IUserIntents.UnmountStorage -> {
@@ -296,28 +305,28 @@ class Presenter(
 
             is Effect.OnRemoveProtectedFile -> {
                 EffectViewProvider.DeleteConfirmDialog(onConfirm = {
-                    state = state.copy(effect = null)
+                    updateState(effect = null)
                     onIntent(IUserIntents.DeleteFile(mEffect.file))
                 }, onDismiss = {
-                    state = state.copy(effect = null)
+                    updateState(effect = null)
                 })
             }
 
             is Effect.OnSetting -> {
                 EffectViewProvider.SettingDialog(mEffect.configure, onConfirm = {
                     onIntent(IUserIntents.UpdateConfigure(it))
-                    state = state.copy(effect = null)
+                    updateState(effect = null)
                 }, onDismiss = {
-                    state = state.copy(effect = null)
+                    updateState(effect = null)
                 })
             }
 
             Effect.OnUnmountStorage -> {
                 EffectViewProvider.UnmountConfirmDialog(onConfirm = {
                     onIntent(IUserIntents.UnmountStorage)
-                    state = state.copy(effect = null)
+                    updateState(effect = null)
                 }, onDismiss = {
-                    state = state.copy(effect = null)
+                    updateState(effect = null)
                 })
             }
         }
@@ -325,5 +334,27 @@ class Presenter(
 
     private inline fun <reified T : IUseCase> findUseCase(): T? {
         return useCaseList.find { it is T } as? T
+    }
+
+    private fun updateState(
+        fileList: SnapshotStateList<RecordFileData> = state.fileList,
+        selectedFile: RecordFileData? = state.selectedFile,
+        camLocation: CamLocation = state.camLocation,
+        isProtected: Boolean = state.isProtected,
+        playingFile: File? = state.playingFile,
+        effect: Effect? = state.effect
+    ) {
+        Log.d(
+            "Presenter",
+            "updateState: $fileList, $selectedFile, $camLocation, $isProtected, $playingFile, $effect"
+        )
+        state = state.copy(
+            fileList = fileList,
+            selectedFile = selectedFile,
+            camLocation = camLocation,
+            isProtected = isProtected,
+            playingFile = playingFile,
+            effect = effect
+        )
     }
 }

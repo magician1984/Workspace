@@ -90,9 +90,12 @@ class Datasource(
     override fun getCacheFile(record: RecordFileData): File {
         val cacheFile = File(cacheFolder, "${record.id}.mp4")
         withServiceAvailable(onAvailable = {
+            Log.d("Datasource", "getCacheFile: ${cacheFile.absolutePath}, exists: ${cacheFile.exists()}")
             if (!cacheFile.exists())
                 service.copyFile(record.dto, cacheFile.absolutePath)
-        }, onUnavailable = {})
+        }, onUnavailable = {
+
+        })
         return cacheFile
     }
 

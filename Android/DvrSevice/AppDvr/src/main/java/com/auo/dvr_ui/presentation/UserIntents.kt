@@ -2,8 +2,6 @@ package com.auo.dvr_ui.presentation
 
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.DvrConfigure
-import com.auo.dvr_core.RecordDuration
-import com.auo.dvr_core.RecordResolution
 import com.auo.dvr_ui.entity.RecordFileData
 
 sealed class IUserIntents{
@@ -24,5 +22,6 @@ sealed class IUserIntents{
     data object OpenSettings : IUserIntents()
     data object UnmountStorage : IUserIntents()
     data class UpdateConfigure(val configure: DvrConfigure) : IUserIntents()
-    data object ReplayFile : IUserIntents()
+    data object RequestPlayFile : IUserIntents()
+    data object ReleasePlayFile : IUserIntents()
 }
