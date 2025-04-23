@@ -21,7 +21,6 @@ internal abstract class PollingFileObserver(
     private val finalizedFiles = mutableSetOf<String>()   // already closed
 
     override fun start() {
-        // ✅ 启动前先扫描一次目录，查找已存在且已完成的文件
         mFolder.listFiles()?.forEach { file ->
             knownFiles[file.name] = file.lastModified()
             if (file.canExecute()) {
@@ -32,7 +31,6 @@ internal abstract class PollingFileObserver(
             }
         }
 
-        // ✅ 开始轮询
         mFuture = mPollingThread.scheduleWithFixedDelay(runnable, 0, mInterval, TimeUnit.MILLISECONDS)
     }
 
