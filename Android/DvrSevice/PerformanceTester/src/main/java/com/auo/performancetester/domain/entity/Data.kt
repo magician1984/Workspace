@@ -4,9 +4,26 @@ import android.icu.text.DecimalFormat
 
 enum class CloneMethod {
     BufferIO,
-    FileChannel,
-    DMA,
-    Shell,
+    FileChannel
+}
+
+enum class FileAllocateMode{
+    NonPreAllocate,
+    PreAllocate
+}
+
+enum class FileSize{
+    Small,
+    Medium,
+    Large
+}
+
+data class TestCaseConfigure(val cloneMethod: CloneMethod, val allocateMode: FileAllocateMode, val fileSize: FileSize, val fileCount : Int, val forceWrite : Boolean = true, val bufferSize: Int = -1 ){
+    override fun toString(): String {
+        val bufferSizeStr = if(cloneMethod == CloneMethod.BufferIO && bufferSize != -1) "_$bufferSize" else ""
+        val syncMode = if(forceWrite) "_sync" else "_async"
+        return "${cloneMethod}_${allocateMode}_${fileSize}_$fileCount$syncMode$bufferSizeStr"
+    }
 }
 
 

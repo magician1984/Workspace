@@ -28,14 +28,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.tooling.preview.Devices
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.auo.performancetester.R
 import com.auo.performancetester.presentation.IModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlin.coroutines.CoroutineContext
 
 
 @Composable
@@ -57,8 +52,18 @@ fun ControlPage(
             items = state.methodSpinner.items,
             selectedIndex = state.methodSpinner.selectedIndex
         )
-        { index -> model.handleIntent(ControlPageIntent.SelectMethod(index)) }
+        { index ->
+            model.handleIntent(ControlPageIntent.SelectMethod(index))
+        }
 
+
+        Spinner(
+            modifier = Modifier.weight(1.0f, true),
+            items = state.modeSpinner.items,
+            selectedIndex = state.modeSpinner.selectedIndex
+        ) { index ->
+            model.handleIntent(ControlPageIntent.SelectMode(index))
+        }
 
         Spinner(
             modifier = Modifier.weight(1.0f, true),
@@ -159,48 +164,4 @@ fun Spinner(
             }
         }
     }
-}
-
-@Preview(device = Devices.TABLET)
-@Composable
-fun ImageButtonPreview() {
-    ImageButton(
-        onClick = {},
-        enable = false,
-        icon = ImageVector.vectorResource(id = R.drawable.baseline_exit_to_app_24)
-    )
-}
-
-@Preview(device = Devices.TABLET)
-@Composable
-fun ControlPagePreview() {
-    val model = object : IModel<ControlPageIntent, ControlPageState> {
-        override val state: StateFlow<ControlPageState>
-            get() = MutableStateFlow(
-                ControlPageState(
-                    false,
-                    SpinnerParam(listOf(), 0),
-                    SpinnerParam(listOf(), 0),
-                    SpinnerParam(listOf(), 0)
-                )
-            )
-        override val coroutineContext: CoroutineContext
-            get() = TODO("Not yet implemented")
-
-        override fun handleIntent(intent: ControlPageIntent) {
-
-        }
-
-    }
-    ControlPage(modifier = Modifier.background(Color.White), model = model)
-}
-
-@Preview(device = Devices.TABLET)
-@Composable
-fun SpinnerPreview() {
-    Spinner(
-        modifier = Modifier,
-        items = listOf(),
-        selectedIndex = 0,
-        onItemSelected = {})
 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.auo.performancetester.datasource.DataSource
 import com.auo.performancetester.datasource.PerformanceMonitor
+import com.auo.performancetester.datasource.ResultWriter
 import com.auo.performancetester.domain.datasource.IDataSource
 import com.auo.performancetester.domain.usecase.IUseCaseExit
 import com.auo.performancetester.domain.usecase.IUseCaseInitialize
@@ -53,8 +54,13 @@ class MainActivity : ComponentActivity() {
 
         Log.d("Main", "InitialDataSource")
 
-        val dataSource = DataSource(context, PerformanceMonitor.enable())
+        val logDir = this.filesDir
 
+        Log.d("Main", "Log dir: ${logDir.absolutePath}")
+
+//        val dataSource = DataSource(context, PerformanceMonitor.enable(), ResultWriter.enable(logDir))
+
+        val dataSource = DataSource(context, PerformanceMonitor.disable(false), ResultWriter.disable())
         func(dataSource)
     }
 
@@ -94,12 +100,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-
-    @Preview(device = Devices.TABLET)
-    @Composable
-    fun Preview() {
-        View()
     }
 }
 

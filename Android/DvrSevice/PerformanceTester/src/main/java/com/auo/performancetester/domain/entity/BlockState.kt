@@ -1,5 +1,7 @@
 package com.auo.performancetester.domain.entity
 
+import java.io.File
+
 data class BlockStat(
     val readIOs: Long,       // 讀取完成次數
     val readMerges: Long,    // 讀取合併次數
@@ -14,6 +16,10 @@ data class BlockStat(
     val weightedIoTimeMs: Long // 加權 I/O 時間
 ) {
     companion object {
+        fun getHeader() : String = "readIOs, readMerges, readSectors, readTimeMs, writeIOs, writeMerges, writeSectors, writeTimeMs, inFlight, ioTimeMs, weightedIoTimeMs"
+
+        fun getValue(state : BlockStat) : String = "${state.readIOs}, ${state.readMerges}, ${state.readSectors}, ${state.readTimeMs}, ${state.writeIOs}, ${state.writeMerges}, ${state.writeSectors}, ${state.writeTimeMs}, ${state.inFlight}, ${state.ioTimeMs}, ${state.weightedIoTimeMs}"
+
         fun fromStatLine(line: String): BlockStat {
             val values = line.trim().split("\\s+".toRegex()).map { it.toLong() }
             return BlockStat(

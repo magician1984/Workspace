@@ -7,12 +7,14 @@ import com.auo.performancetester.datasource.method.FileChannelMethod
 import com.auo.performancetester.domain.datasource.IDataSource
 import com.auo.performancetester.domain.entity.CloneMethod
 import com.auo.dvr_core.DvrException
-import com.auo.performancetester.domain.entity.BlockStat
+import com.auo.performancetester.domain.entity.FileAllocateMode
+import com.auo.performancetester.domain.entity.FileSize
 import com.auo.performancetester.domain.entity.IData
+import com.auo.performancetester.domain.entity.TestCaseConfigure
 import java.io.File
 import java.io.RandomAccessFile
 
-class DataSource(private val context : Context, private val monitor : IDataSource.IPerformanceMonitor) : IDataSource {
+class DataSource(private val context : Context, private val monitor : IDataSource.IPerformanceMonitor, private val writer : IDataSource.IResultWriter) : IDataSource {
     override var eventListener: IDataSource.EventListener? = null
 
     private var sourceFolder : File? = null
@@ -22,6 +24,11 @@ class DataSource(private val context : Context, private val monitor : IDataSourc
     override fun initialize() {
         notifyEvent("Start initialize")
         this.sourceFolder = File(File(context.filesDir, "files_src"), "source")
+
+        if(this.sourceFolder?.exists() == false){
+            this.sourceFolder!!.mkdirs()
+        }
+
         notifyEvent("Source folder created: ${this.sourceFolder?.absolutePath}")
 
         notifyEvent("Query USB storage")
@@ -32,55 +39,69 @@ class DataSource(private val context : Context, private val monitor : IDataSourc
             return
         }
 
-        mountFolder.listFiles().apply {
-            if(this.isNullOrEmpty()){
-                notifyEvent("USB storage not found")
-                return
-            }
+        val list = mountFolder.listFiles()
 
-            notifyEvent("Use USB storage: ${this[0].absolutePath}")
-
-            this@DataSource.targetFolder = File(this[0], "target")
-
-            notifyEvent("Initialize finished")
+        if(list == null || list.isEmpty()){
+            notifyEvent("USB storage not found")
+            return
         }
 
+        val targetRoot = list[0]
 
+        notifyEvent("USB storage found: ${targetRoot.absolutePath}")
+        this.targetFolder = File(targetRoot, "target")
+
+        if(this.targetFolder?.exists() == false){
+            this.targetFolder!!.mkdirs()
+        }
+
+        notifyEvent("Initialize finished")
     }
 
-    override fun startTest(method:CloneMethod, size : Long, count : Int) {
-        initialCheck{ src, dst ->
-            notifyEvent("Select clone method")
-            val methodImpl = when(method){
+    override fun startTest(configure: TestCaseConfigure) {
+        initialCheck{ srcFolder, dstFolder ->
+            clean(srcFolder, dstFolder)
+
+            val methodImpl = when(configure.cloneMethod){
                 CloneMethod.BufferIO -> BufferCopyMethod()
                 CloneMethod.FileChannel -> FileChannelMethod()
-                else -> throw DvrException(this.javaClass.name, "Unsupported")
             }
 
-            notifyEvent("Clean up")
-            clean(src, dst)
+            val fileSize : Long = when(configure.fileSize){
+                // 1M
+                FileSize.Small -> 1024 * 1024
+                // 20M
+                FileSize.Medium -> 20 * 1024 * 1024
+                // 100M
+                FileSize.Large -> 100 * 1024 * 1024
+            }
 
-            notifyEvent("Create test files and dst files")
-            val files : List<File> = createdTestFiles(src, size, count)
-            val dstFiles : List<File> = createDstFiles(dst, files)
+            val preallocate = configure.allocateMode == FileAllocateMode.PreAllocate
 
-            notifyEvent("Start clone test")
-            val startTime : Long = System.nanoTime()
-
-            monitor.start()
-            methodImpl.clone(files, dstFiles)
-            monitor.stop()
-
-            val endTime : Long = System.nanoTime()
-
-            val totalTimeNano = startTime - endTime;
-            notifyEvent("Clone test finished: $totalTimeNano us")
-
-            notifyResult(IData.TestResult(size, count, method, totalTimeNano, monitor.getResult()))
+            notifyEvent("Start test: $configure")
+            notifyEvent("Open log writer")
+            writer.open(configure)
+            notifyEvent("Create test file: $fileSize bytes")
+            val srcFile = createTestFile(srcFolder, fileSize)
+            notifyEvent("Create destination files: ${configure.fileCount} files")
+            val destFiles = createDstFiles(dstFolder, configure.fileCount)
+            val forceWrite = configure.forceWrite
+            val startTime = System.nanoTime()
+            for(i in destFiles.indices){
+                monitor.start()
+                methodImpl.clone(srcFile, destFiles[i], preallocate, forceWrite)
+                monitor.stop()
+                writer.write(i, monitor.getResult()!!)
+            }
+            val endTime = System.nanoTime()
+            writer.close()
+            notifyEvent("Test finished: $configure")
+            notifyResult(IData.TestResult(fileSize, configure.fileCount, configure.cloneMethod,(endTime - startTime) / 1_000_000))
         }
+
     }
 
-     private fun clean(src:File, dst:File) {
+    private fun clean(src:File, dst:File) {
         if(src.exists())
             src.deleteRecursively()
 
@@ -108,11 +129,28 @@ class DataSource(private val context : Context, private val monitor : IDataSourc
         return files
     }
 
+    private fun createTestFile(folder : File, size: Long): File{
+        val file = File(folder, "test_file_${System.currentTimeMillis()}.tmp")
+        RandomAccessFile(file, "rw").apply {
+            setLength(size)
+            close()
+        }
+        return file
+    }
+
     private fun createDstFiles(folder : File, files : List<File>) : List<File>{
         val dstFiles : MutableList<File> = mutableListOf()
 
         files.forEach { file ->
             dstFiles.add(File(folder, file.name))
+        }
+        return dstFiles
+    }
+
+    private fun createDstFiles(folder : File, count : Int) : List<File>{
+        val dstFiles : MutableList<File> = mutableListOf()
+        for (i in 0 until count) {
+            dstFiles.add(File(folder, "test_file_$i.tmp"))
         }
         return dstFiles
     }

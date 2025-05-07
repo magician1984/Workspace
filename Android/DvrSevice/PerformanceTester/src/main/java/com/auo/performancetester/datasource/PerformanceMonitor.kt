@@ -16,7 +16,8 @@ object PerformanceMonitor {
             Log.d(TAG, "stop: Disable")
         }
 
-        override fun getResult(): BlockStat? = null
+        override fun getResult(): BlockStat = BlockStat.empty()
+
     }
 
     fun enable() : IDataSource.IPerformanceMonitor = object : IDataSource.IPerformanceMonitor {
