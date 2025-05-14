@@ -47,6 +47,7 @@ class QCarCamLibAndroid(private val context: Context) : IQCarCamLib {
 
     private fun getFirstCameraId(): String? {
         try {
+            Log.d(TAG, "Getting first camera ID: ${cameraManager.cameraIdList.joinToString()}")
             for (cameraId in cameraManager.cameraIdList) {
                 Log.d(TAG, "Camera ID: $cameraId")
                 val characteristics = cameraManager.getCameraCharacteristics(cameraId)
@@ -55,7 +56,8 @@ class QCarCamLibAndroid(private val context: Context) : IQCarCamLib {
                     return cameraId
                 }
             }
-            return cameraManager.cameraIdList[0]
+            Log.d(TAG, "No back camera found, using first available camera")
+            return if(cameraManager.cameraIdList.isNotEmpty()) cameraManager.cameraIdList[0] else null
         } catch (e: CameraAccessException) {
             e.printStackTrace()
             return null

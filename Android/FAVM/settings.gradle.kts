@@ -19,6 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "CameraNative"
+rootProject.name = "FAVM"
 include(":app")
-include(":LibQCarCam")
