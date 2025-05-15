@@ -1,6 +1,5 @@
 package com.auo.dvr_ui.datasource
 
-import android.content.Context
 import android.util.Log
 import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrState
@@ -15,7 +14,6 @@ import com.auo.dvr_ui.usecase.IDataSource
 import java.io.File
 
 class Datasource(
-    val context: Context,
     private val service: IDvrService,
     private val cacheFolder: File
 ) : IDataSource {

@@ -93,7 +93,7 @@ class MainActivity : ComponentActivity() {
             }
             Log.d("MainActivity", "initializeDataSource: service ready")
 
-            mDataSource = Datasource(this, mService, cacheDir)
+            mDataSource = Datasource(mService, cacheDir)
 
             Log.d("MainActivity", "initializeDataSource: datasource ready")
             mPresenter.summit(
