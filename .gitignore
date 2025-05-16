@@ -84,3 +84,5 @@ lint/tmp/
 *.keystore
 
 Android/ffmpeg
+
+Android/FAVM/

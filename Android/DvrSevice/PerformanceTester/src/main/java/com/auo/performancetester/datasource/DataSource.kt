@@ -1,6 +1,7 @@
 package com.auo.performancetester.datasource
 
 import android.content.Context
+import android.os.Environment
 import android.util.Log
 import com.auo.performancetester.datasource.method.BufferCopyMethod
 import com.auo.performancetester.datasource.method.FileChannelMethod
@@ -11,8 +12,11 @@ import com.auo.performancetester.domain.entity.FileAllocateMode
 import com.auo.performancetester.domain.entity.FileSize
 import com.auo.performancetester.domain.entity.IData
 import com.auo.performancetester.domain.entity.TestCaseConfigure
+import com.auo.performancetester.domain.entity.ThreadSize
 import java.io.File
 import java.io.RandomAccessFile
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class DataSource(private val context : Context, private val monitor : IDataSource.IPerformanceMonitor, private val writer : IDataSource.IResultWriter) : IDataSource {
     override var eventListener: IDataSource.EventListener? = null
@@ -46,7 +50,9 @@ class DataSource(private val context : Context, private val monitor : IDataSourc
             return
         }
 
-        val targetRoot = list[0]
+//        val targetRoot = list[0]
+        val targetRoot = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+
 
         notifyEvent("USB storage found: ${targetRoot.absolutePath}")
         this.targetFolder = File(targetRoot, "target")
@@ -78,25 +84,35 @@ class DataSource(private val context : Context, private val monitor : IDataSourc
 
             val preallocate = configure.allocateMode == FileAllocateMode.PreAllocate
 
-            notifyEvent("Start test: $configure")
-            notifyEvent("Open log writer")
-            writer.open(configure)
-            notifyEvent("Create test file: $fileSize bytes")
-            val srcFile = createTestFile(srcFolder, fileSize)
-            notifyEvent("Create destination files: ${configure.fileCount} files")
-            val destFiles = createDstFiles(dstFolder, configure.fileCount)
-            val forceWrite = configure.forceWrite
-            val startTime = System.nanoTime()
-            for(i in destFiles.indices){
-                monitor.start()
-                methodImpl.clone(srcFile, destFiles[i], preallocate, forceWrite)
-                monitor.stop()
-                writer.write(i, monitor.getResult()!!)
+            val threadCount = configure.threadSize.ordinal + 1
+
+            val executeService : ExecutorService = Executors.newFixedThreadPool(threadCount)
+
+            for(threadInd in 0 until threadCount){
+                executeService.submit{
+                    notifyEvent("Start test: $configure")
+                    notifyEvent("Open log writer")
+                    writer.open(configure)
+                    notifyEvent("Create test file: $fileSize bytes")
+                    val srcFile = createTestFile(srcFolder, fileSize)
+                    notifyEvent("Create destination files: ${configure.fileCount} files")
+                    val destFiles = createDstFiles(dstFolder, configure.fileCount)
+                    val forceWrite = configure.forceWrite
+                    val startTime = System.nanoTime()
+                    for(i in destFiles.indices){
+                        monitor.start()
+                        methodImpl.clone(srcFile, destFiles[i], preallocate, forceWrite)
+                        monitor.stop()
+                        writer.write(i, monitor.getResult()!!)
+                    }
+                    val endTime = System.nanoTime()
+                    writer.close()
+                    notifyEvent("Test finished: $configure")
+                    notifyResult(IData.TestResult(fileSize, configure.fileCount, configure.cloneMethod,(endTime - startTime) / 1_000_000))
+                }
             }
-            val endTime = System.nanoTime()
-            writer.close()
-            notifyEvent("Test finished: $configure")
-            notifyResult(IData.TestResult(fileSize, configure.fileCount, configure.cloneMethod,(endTime - startTime) / 1_000_000))
+
+            executeService.shutdown()
         }
 
     }
@@ -136,15 +152,6 @@ class DataSource(private val context : Context, private val monitor : IDataSourc
             close()
         }
         return file
-    }
-
-    private fun createDstFiles(folder : File, files : List<File>) : List<File>{
-        val dstFiles : MutableList<File> = mutableListOf()
-
-        files.forEach { file ->
-            dstFiles.add(File(folder, file.name))
-        }
-        return dstFiles
     }
 
     private fun createDstFiles(folder : File, count : Int) : List<File>{
