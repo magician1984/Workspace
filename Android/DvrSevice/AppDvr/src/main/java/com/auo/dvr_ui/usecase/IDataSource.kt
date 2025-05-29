@@ -1,14 +1,12 @@
 package com.auo.dvr_ui.usecase
 
 import com.auo.dvr_core.DvrConfigure
-import com.auo.dvr_core.RecordDuration
+import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_ui.entity.DvrStateData
-import com.auo.dvr_ui.entity.RecordFileData
-import java.io.File
 
 interface IDataSource {
     fun interface EventListener{
-        fun onUpdate(records : List<RecordFileData>)
+        fun onUpdate(records : List<RecordGroup>)
     }
 
     fun interface DvrStateListener{
@@ -17,13 +15,12 @@ interface IDataSource {
 
     val dvrState : DvrStateData
 
-    fun getAllRecords() : List<RecordFileData>
+    fun getAllRecords() : List<RecordGroup>
     fun registerUpdateListener(listener: EventListener)
     fun registerDvrStateListener(listener: DvrStateListener)
-    fun lockRecord(record: RecordFileData)
-    fun unlockRecord(record: RecordFileData)
-    fun deleteRecord(record: RecordFileData)
-    fun getCacheFile(record: RecordFileData) : File
+    fun lockRecord(record: RecordGroup)
+    fun unlockRecord(record: RecordGroup)
+    fun deleteRecord(record: RecordGroup)
     fun unmountStorage()
     fun updateConfigure(configure: DvrConfigure)
     fun getConfigure() : DvrConfigure

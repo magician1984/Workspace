@@ -1,6 +1,7 @@
 package com.auo.dvr
 
 import android.content.Context
+import android.net.Uri
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrState
@@ -10,12 +11,16 @@ import com.auo.dvr_core.OnRecordUpdateListener
 import com.auo.dvr_core.OnStateUpdateListener
 import com.auo.dvr_core.RecordDuration
 import com.auo.dvr_core.RecordFile
+import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_core.RecordResolution
 import com.auo.dvr_core.RecordType
 import java.io.File
+import java.io.FileOutputStream
+import java.io.OutputStream
+import kotlin.random.Random
 
 class ServiceApiImpl(private val context: Context) : DvrService.IServiceApi() {
-    private val mRecordFiles = mutableListOf<RecordFile>()
+    private val mRecordGroups = mutableListOf<RecordGroup>()
 
     private val mListeners = mutableListOf<OnRecordUpdateListener>()
 
@@ -40,17 +45,30 @@ class ServiceApiImpl(private val context: Context) : DvrService.IServiceApi() {
     private var mConfigure : DvrConfigure = DvrConfigure(RecordDuration.FiveMin, RecordResolution.FHD)
 
     init {
-        //random generate 200 record files. filename is {timestamp}.mp4
+        val mockVideoPath = File(context.cacheDir, "mock.mp4")
+
+        context.assets.open("mock_video.mp4").use { input ->
+            FileOutputStream(mockVideoPath).use { output ->
+                input.copyTo(output)
+            }
+        }
+
+        val mockUri : Uri = Uri.fromFile(mockVideoPath)
+
+        //random generate 200 record grout with four record file, timestamp is millisec, time scale is min for goup, second for file . filename is {timestamp}.mp4
+        val recordCount = 200
         val time = System.currentTimeMillis()
         for (i in 1..200) {
-            val randomTime = time - (i * 1000 * 60 * 5)
-            val recordFile = RecordFile(
-                "${randomTime}.mp4",
-                randomTime,
-                CamLocation.entries.random(),
-                RecordType.entries.random()
-            )
-            mRecordFiles.add(recordFile)
+            // time + i * 1 min
+            val min = time + i * 60 * 1000
+            val fileList = buildList<RecordFile>(CamLocation.entries.size){
+                // Create random second between 0 and 59
+                CamLocation.entries.forEach {
+                    val timeWithSec = min + Random.nextInt(0, 60) * 1000
+                    add(RecordFile("${timeWithSec}.mp4", timeWithSec, it, mockUri))
+                }
+            }
+            mRecordGroups.add(RecordGroup(min, fileList, RecordType.Normal))
         }
     }
 
@@ -58,8 +76,8 @@ class ServiceApiImpl(private val context: Context) : DvrService.IServiceApi() {
 
     }
 
-    override fun getRecordFiles(): MutableList<RecordFile> {
-        return if(isMounted) mRecordFiles else mutableListOf()
+    override fun getRecordGoups(): MutableList<RecordGroup> {
+        return if(isMounted) mRecordGroups else mutableListOf()
     }
 
     override fun getState(): DvrState = mState
@@ -73,33 +91,24 @@ class ServiceApiImpl(private val context: Context) : DvrService.IServiceApi() {
         mConfigureListeners.forEach { it.onUpdate() }
     }
 
-    override fun lockFile(recordFile: RecordFile) {
+    override fun lockFile(recordGroup: RecordGroup) {
         runWithUpdateNotify {
-            val index = mRecordFiles.indexOfLast { it.hashCode() == recordFile.hashCode()}
-            mRecordFiles[index] = recordFile.copy(type = RecordType.Locked)
+            val index = mRecordGroups.indexOfFirst { it.timestamp == recordGroup.timestamp }
+            mRecordGroups[index] = recordGroup.copy(type = RecordType.Locked)
         }
     }
 
-    override fun unlockFile(recordFile: RecordFile) {
+    override fun unlockFile(recordGroup: RecordGroup) {
         runWithUpdateNotify {
-            val index = mRecordFiles.indexOfLast { it.hashCode() == recordFile.hashCode()}
-            mRecordFiles[index] = recordFile.copy(type = RecordType.Normal)
+            val index = mRecordGroups.indexOfFirst { it.timestamp == recordGroup.timestamp }
+            mRecordGroups[index] = recordGroup.copy(type = RecordType.Normal)
         }
     }
 
-    override fun deleteFile(recordFile: RecordFile) {
+    override fun deleteFile(recordGroup: RecordGroup?) {
         runWithUpdateNotify {
-            mRecordFiles.remove(recordFile)
+            mRecordGroups.remove(recordGroup)
         }
-    }
-
-    override fun copyFile(recordFile: RecordFile, destPath: String) {
-        context.assets.open("mock_video.mp4")
-            .use { inputStream ->
-                File(destPath).outputStream().use { outputStream ->
-                    inputStream.copyTo(outputStream)
-                }
-            }
     }
 
     override fun registerListener(listener: OnRecordUpdateListener) : Unit = if(!mListeners.add(listener)) throw Exception("Listener already registered") else Unit
@@ -114,9 +123,6 @@ class ServiceApiImpl(private val context: Context) : DvrService.IServiceApi() {
         isMounted = false
     }
 
-    override fun forceClone() {
-
-    }
 
     private inline fun runWithUpdateNotify(crossinline block: () -> Unit){
         block()

@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -140,16 +139,16 @@ internal class RecordListView(override val onIntent: (IUserIntents) -> Unit) : P
 
                     is IFileControlIntent.LockSwitch -> {
                         if (file.type == RecordType.Locked)
-                            IUserIntents.UnlockFile(file)
+                            IUserIntents.UnlockSelectedGroups(file)
                         else
                             IUserIntents.LockFile(file)
                     }
 
                     is IFileControlIntent.SelectSwitch -> {
                         if (state.selectedFile?.id == file.id)
-                            IUserIntents.UnselectFile
+                            IUserIntents.UnselectGroup
                         else
-                            IUserIntents.SelectFile(file)
+                            IUserIntents.SelectGroup(file)
                     }
                 }
                 onIntent(userIntent)

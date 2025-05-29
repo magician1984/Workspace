@@ -29,8 +29,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.DvrConfigure
+import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_core.RecordType
 import com.auo.dvr_ui.entity.IUseCase
 import com.auo.dvr_ui.entity.IUseCaseDeleteFile
@@ -44,7 +44,6 @@ import com.auo.dvr_ui.entity.IUseCaseRegisterListener
 import com.auo.dvr_ui.entity.IUseCaseSetConfigure
 import com.auo.dvr_ui.entity.IUseCaseUnlockFile
 import com.auo.dvr_ui.entity.IUseCaseUnmountStorage
-import com.auo.dvr_ui.entity.RecordFileData
 import com.auo.dvr_ui.presentation.contents.ActionBarView
 import com.auo.dvr_ui.presentation.contents.RecordListView
 import com.auo.dvr_ui.presentation.contents.ReplayView
@@ -55,7 +54,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
 
 class Presenter(
     private val renderer: ComponentActivity
@@ -63,25 +61,24 @@ class Presenter(
 
     internal sealed class Effect {
         data class OnError(val message: String) : Effect()
-        data class OnRemoveProtectedFile(val file: RecordFileData) : Effect()
+        data class OnRemoveProtectedFile(val file: RecordGroup) : Effect()
         data class OnSetting(val configure: DvrConfigure) : Effect()
         data object OnUnmountStorage : Effect()
     }
 
     internal data class State(
-        val fileList: SnapshotStateList<RecordFileData>,
-        val selectedFile: RecordFileData?,
-        val camLocation: CamLocation,
-        val isProtected: Boolean,
-        val playingFile: File?,
+        val groupList: List<RecordGroup>,
+        val selectedGroups: List<RecordGroup>,
+        val selectedType : RecordType,
+        val isSelectMode : Boolean,
         val effect: Effect?
     ) {
         companion object {
             fun parseList(
-                list: List<RecordFileData>,
+                list: List<RecordGroup>,
                 isProtected: Boolean
-            ): SnapshotStateList<RecordFileData> {
-                return mutableStateListOf<RecordFileData>().apply {
+            ): SnapshotStateList<RecordGroup> {
+                return mutableStateListOf<RecordGroup>().apply {
                     addAll(list.filter {
                         if (isProtected)
                             it.type == RecordType.Protected
@@ -107,7 +104,7 @@ class Presenter(
     private val mReplayView: IView = ReplayView(::onIntent)
 
     private val _state: MutableState<State> =
-        mutableStateOf(State(mutableStateListOf(), null, CamLocation.Front, false, null, null))
+        mutableStateOf(State(emptyList(), emptyList(), RecordType.Normal, false, null))
 
     private var state by _state
 
@@ -120,7 +117,7 @@ class Presenter(
         findUseCase<IUseCaseRegisterListener>()?.invoke {
             backgroundScope.launch {
                 Log.d("Presenter", "onUpdate: ${it.size}")
-                updateState(fileList = State.parseList(it, state.isProtected))
+                updateState(groupList = it)
             }
         }
 
@@ -129,13 +126,13 @@ class Presenter(
                 val errorEffect =
                     if (!it.isAvailable) Effect.OnError(it.errorMessage ?: "") else null
 
-                val fileList: List<RecordFileData> = if (it.isAvailable)
+                val fileList: List<RecordGroup> = if (it.isAvailable)
                     findUseCase<IUseCaseGetListFiles>()?.invoke() ?: emptyList()
                 else
                     emptyList()
 
                 updateState(
-                    fileList = State.parseList(fileList, state.isProtected),
+                    groupList = fileList,
                     effect = errorEffect
                 )
             }
@@ -223,15 +220,15 @@ class Presenter(
         backgroundScope.launch {
             Log.d("Presenter", "handleIntent: $intent")
             when (intent) {
-                is IUserIntents.DeleteFile -> {
+                is IUserIntents.DeleteSelectedGroups -> {
                     findUseCase<IUseCaseDeleteFile>()?.invoke(intent.file)
                     if (intent.file.id == state.selectedFile?.id)
                         updateState(selectedFile = null)
                 }
 
-                is IUserIntents.LockFile -> findUseCase<IUseCaseLockFile>()?.invoke(intent.file)
-                is IUserIntents.SelectFile -> updateState(selectedFile = intent.file, playingFile = null)
-                is IUserIntents.UnlockFile -> findUseCase<IUseCaseUnlockFile>()?.invoke(intent.file)
+                is IUserIntents.LockSelectedGroups -> findUseCase<IUseCaseLockFile>()?.invoke(intent.file)
+                is IUserIntents.SelectGroup -> updateState(selectedFile = intent.file, playingFile = null)
+                is IUserIntents.UnlockSelectedGroups -> findUseCase<IUseCaseUnlockFile>()?.invoke(intent.file)
                 is IUserIntents.ViewCameraLocation -> updateState(
                     camLocation = intent.camLocation,
                     selectedFile = null
@@ -258,7 +255,7 @@ class Presenter(
                     )
                 }
 
-                IUserIntents.UnselectFile -> state = state.copy(selectedFile = null, playingFile = null)
+                IUserIntents.UnselectGroup -> state = state.copy(selectedFile = null, playingFile = null)
                 is IUserIntents.RequestPlayFile -> {
                     val cacheFile = findUseCase<IUseCaseGetCacheFile>()?.invoke(
                         state.selectedFile ?: return@launch
@@ -337,23 +334,21 @@ class Presenter(
     }
 
     private fun updateState(
-        fileList: SnapshotStateList<RecordFileData> = state.fileList,
-        selectedFile: RecordFileData? = state.selectedFile,
-        camLocation: CamLocation = state.camLocation,
-        isProtected: Boolean = state.isProtected,
-        playingFile: File? = state.playingFile,
+        groupList: List<RecordGroup> = state.groupList,
+        selectedGroups: List<RecordGroup> = state.selectedGroups,
+        selectedType: RecordType = state.selectedType,
+        isSelectMode: Boolean = state.isSelectMode,
         effect: Effect? = state.effect
     ) {
         Log.d(
             "Presenter",
-            "updateState: $fileList, $selectedFile, $camLocation, $isProtected, $playingFile, $effect"
+            "updateState: groupList=${groupList.size}, selectedGroups=${selectedGroups.size}, selectedType=$selectedType, isSelectMode=$isSelectMode, effect=$effect"
         )
         state = state.copy(
-            fileList = fileList,
-            selectedFile = selectedFile,
-            camLocation = camLocation,
-            isProtected = isProtected,
-            playingFile = playingFile,
+            groupList = groupList,
+            selectedGroups = selectedGroups,
+            selectedType = selectedType,
+            isSelectMode = isSelectMode,
             effect = effect
         )
     }
