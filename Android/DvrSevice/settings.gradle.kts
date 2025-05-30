@@ -24,7 +24,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "DvrService"
-include(":PerformanceTester")
 include(":SrvDvr")
 include(":LibDvrCore")
 include(":AppDvr")
