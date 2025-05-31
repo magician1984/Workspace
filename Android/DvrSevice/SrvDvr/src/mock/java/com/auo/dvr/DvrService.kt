@@ -8,17 +8,10 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.auo.dvr_core.DvrException
-import com.auo.dvr_core.DvrState
 import com.auo.dvr_core.IDvrService
 
 class DvrService : Service() {
-
-
-    abstract class IServiceApi : IDvrService.Stub(){
-        abstract fun updateState(state: DvrState)
-    }
-
-    private lateinit var mServiceApi: IServiceApi
+    private lateinit var mServiceApi: IDvrService.Stub
 
     private var isInitialized : Boolean = false
 

@@ -4,21 +4,29 @@ import android.net.Uri
 import android.os.Parcel
 import android.os.Parcelable
 
-data class RecordFile(val name: String, val createTime: Long, val location: CamLocation, val uri: Uri) : Parcelable{
+data class RecordFile(
+    val name: String,
+    val createTime: Long,
+    val location: CamLocation,
+    val uri: Uri,
+    val thumbnail: Uri
+) : Parcelable {
     constructor(parcel: Parcel) : this(
         parcel.readString().toString(),
         parcel.readLong(),
         CamLocation.fromCode(parcel.readInt()),
-        parcel.readParcelable(Uri::class.java.classLoader, Uri::class.java)?: Uri.EMPTY
+        parcel.readParcelable(Uri::class.java.classLoader, Uri::class.java) ?: Uri.EMPTY,
+        parcel.readParcelable(Uri::class.java.classLoader, Uri::class.java) ?: Uri.EMPTY
     )
 
-    override fun describeContents(): Int  = 0
+    override fun describeContents(): Int = 0
 
     override fun writeToParcel(dest: Parcel, flags: Int) {
         dest.writeString(name)
         dest.writeLong(createTime)
         dest.writeInt(location.code)
         dest.writeParcelable(uri, flags)
+        dest.writeParcelable(thumbnail, flags)
     }
 
     override fun equals(other: Any?): Boolean {

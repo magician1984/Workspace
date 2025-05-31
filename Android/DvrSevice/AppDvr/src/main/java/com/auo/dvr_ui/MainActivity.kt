@@ -96,7 +96,7 @@ class MainActivity : ComponentActivity() {
             mDataSource = Datasource(mService, cacheDir)
 
             Log.d("MainActivity", "initializeDataSource: datasource ready")
-            mPresenter.summit(
+            mPresenter.summitUseCases(
                 UseCaseGetListFiles(mDataSource),
                 UseCaseRegisterListener(mDataSource),
                 UseCaseLockFile(mDataSource),

@@ -110,7 +110,7 @@ class Presenter(
 
     private val backgroundScope = CoroutineScope(Dispatchers.IO)
 
-    override fun summit(vararg useCases: IUseCase) {
+    override fun summitUseCases(vararg useCases: IUseCase) {
         useCaseList.clear()
         useCaseList.addAll(useCases)
 
@@ -219,75 +219,7 @@ class Presenter(
 
         backgroundScope.launch {
             Log.d("Presenter", "handleIntent: $intent")
-            when (intent) {
-                is IUserIntents.DeleteSelectedGroups -> {
-                    findUseCase<IUseCaseDeleteFile>()?.invoke(intent.file)
-                    if (intent.file.id == state.selectedFile?.id)
-                        updateState(selectedFile = null)
-                }
 
-                is IUserIntents.LockSelectedGroups -> findUseCase<IUseCaseLockFile>()?.invoke(intent.file)
-                is IUserIntents.SelectGroup -> updateState(selectedFile = intent.file, playingFile = null)
-                is IUserIntents.UnlockSelectedGroups -> findUseCase<IUseCaseUnlockFile>()?.invoke(intent.file)
-                is IUserIntents.ViewCameraLocation -> updateState(
-                    camLocation = intent.camLocation,
-                    selectedFile = null
-                )
-
-                IUserIntents.ViewNormal -> {
-                    val fileList = findUseCase<IUseCaseGetListFiles>()?.invoke()
-                        ?.filter { it.type != RecordType.Protected } ?: emptyList()
-
-                    updateState(
-                        fileList = State.parseList(fileList, false),
-                        isProtected = false,
-                        selectedFile = null
-                    )
-                }
-
-                IUserIntents.ViewProtected -> {
-                    val fileList = findUseCase<IUseCaseGetListFiles>()?.invoke()
-                        ?.filter { it.type == RecordType.Protected } ?: emptyList()
-                    updateState(
-                        fileList = State.parseList(fileList, true),
-                        isProtected = true,
-                        selectedFile = null
-                    )
-                }
-
-                IUserIntents.UnselectGroup -> state = state.copy(selectedFile = null, playingFile = null)
-                is IUserIntents.RequestPlayFile -> {
-                    val cacheFile = findUseCase<IUseCaseGetCacheFile>()?.invoke(
-                        state.selectedFile ?: return@launch
-                    ) ?: return@launch
-
-                    updateState(playingFile = cacheFile)
-                }
-                is IUserIntents.ReleasePlayFile -> {
-                    updateState(playingFile = null)
-                }
-
-                is IUserIntents.ConfirmDeleteFile -> {
-                    updateState(effect = Effect.OnRemoveProtectedFile(intent.file))
-                }
-
-                IUserIntents.ConfirmUnmountStorage -> {
-                    updateState(effect = Effect.OnUnmountStorage)
-                }
-
-                IUserIntents.OpenSettings -> {
-                    val configure = findUseCase<IUseCaseGetConfigure>()?.invoke() ?: return@launch
-                    updateState(effect = Effect.OnSetting(configure))
-                }
-
-                IUserIntents.UnmountStorage -> {
-                    findUseCase<IUseCaseUnmountStorage>()?.invoke()
-                }
-
-                is IUserIntents.UpdateConfigure -> {
-                    findUseCase<IUseCaseSetConfigure>()?.invoke(intent.configure)
-                }
-            }
         }
     }
 

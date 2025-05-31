@@ -3,19 +3,16 @@ package com.auo.dvr_ui.datasource
 import android.util.Log
 import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrState
+import com.auo.dvr_core.IDvrEventCallback
 import com.auo.dvr_core.IDvrService
-import com.auo.dvr_core.OnRecordUpdateListener
-import com.auo.dvr_core.OnStateUpdateListener
 import com.auo.dvr_core.RecordDuration
 import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_core.RecordResolution
 import com.auo.dvr_ui.entity.DvrStateData
 import com.auo.dvr_ui.usecase.IDataSource
-import java.io.File
 
 class Datasource(
-    private val service: IDvrService,
-    private val cacheFolder: File
+    private val service: IDvrService
 ) : IDataSource {
     private var mListeners: MutableList<IDataSource.EventListener> = mutableListOf()
 
@@ -39,18 +36,17 @@ class Datasource(
         errorMessages[DvrState.ErrorType.InternalError] = "Internal error"
         errorMessages[DvrState.ErrorType.InRestart] = "In restarting"
 
-        Log.d("Datasource", "register listener")
-        service.registerListener(object : OnRecordUpdateListener.Stub() {
-            override fun onUpdate() {
-                val records = getAllRecords()
-                mListeners.forEach { it.onUpdate(records) }
+        service.registerCallback(object : IDvrEventCallback.Stub(){
+            override fun onRecordUpdate(groups: List<RecordGroup>) {
+                mListeners.forEach { it.onUpdate(groups) }
             }
-        })
 
-        Log.d("Datasource", "register state listener")
-        service.registerStateListener(object : OnStateUpdateListener.Stub() {
-            override fun onStateUpdate() {
-                updateDvrState(service.state)
+            override fun onStateUpdate(state: DvrState) {
+                updateDvrState(state)
+            }
+
+            override fun onConfigureUpdate(configure: DvrConfigure?) {
+                TODO("Not yet implemented")
             }
         })
 
@@ -85,6 +81,7 @@ class Datasource(
         service.unmountFlash()
     }, onUnavailable = {})
 
+    @Deprecated("Not support")
     override fun updateConfigure(configure: DvrConfigure): Unit =
         withServiceAvailable(onAvailable = {
             service.updataConfigure(configure)

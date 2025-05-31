@@ -27,64 +27,8 @@ import com.auo.dvr_ui.presentation.Presenter
 internal class ActionBarView(override val onIntent: (IUserIntents) -> Unit) : Presenter.IView {
     @Composable
     override fun Draw(modifier: Modifier, state: Presenter.State) {
-        val normalIconRes = remember {
-            R.drawable.baseline_directions_car_filled_24
-        }
 
-        val protectedIconRes = remember {
-            R.drawable.baseline_car_crash_24
-        }
 
-        val settingIconRes = remember {
-            R.drawable.baseline_settings_24
-        }
-
-        val storageIconRes = remember {
-            R.drawable.baseline_sd_storage_24
-        }
-
-        Row(modifier = modifier.padding(8.dp)) {
-            TypeButton(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .aspectRatio(1f),
-                res = painterResource(id = normalIconRes),
-                isSelected = !state.isProtected
-            ) {
-                onIntent(IUserIntents.ViewNormal)
-            }
-            Spacer(modifier = modifier.width(16.dp))
-            TypeButton(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .aspectRatio(1f),
-                res = painterResource(id = protectedIconRes),
-                isSelected = state.isProtected
-            ) {
-                onIntent(IUserIntents.ViewProtected)
-            }
-            Spacer(modifier = modifier.weight(1f))
-            Icon(
-                painter = painterResource(id = storageIconRes),
-                contentDescription = "",
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .aspectRatio(1f)
-                    .clickable {
-                        onIntent(IUserIntents.ConfirmUnmountStorage)
-                    }
-            )
-            Icon(
-                painter = painterResource(id = settingIconRes),
-                contentDescription = "",
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .aspectRatio(1f)
-                    .clickable {
-                        onIntent(IUserIntents.OpenSettings)
-                    }
-            )
-        }
     }
 
     @Composable

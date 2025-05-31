@@ -22,6 +22,7 @@ interface IDataSource {
     fun unlockRecord(record: RecordGroup)
     fun deleteRecord(record: RecordGroup)
     fun unmountStorage()
+    @Deprecated("Not support")
     fun updateConfigure(configure: DvrConfigure)
     fun getConfigure() : DvrConfigure
 }

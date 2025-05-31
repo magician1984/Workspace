@@ -5,127 +5,113 @@ import android.net.Uri
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrState
+import com.auo.dvr_core.IDvrEventCallback
 import com.auo.dvr_core.IDvrService
-import com.auo.dvr_core.OnConfigureUpdateListener
-import com.auo.dvr_core.OnRecordUpdateListener
-import com.auo.dvr_core.OnStateUpdateListener
 import com.auo.dvr_core.RecordDuration
 import com.auo.dvr_core.RecordFile
 import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_core.RecordResolution
 import com.auo.dvr_core.RecordType
-import java.io.File
-import java.io.FileOutputStream
-import java.io.OutputStream
-import kotlin.random.Random
 
-class ServiceApiImpl(private val context: Context) : DvrService.IServiceApi() {
-    private val mRecordGroups = mutableListOf<RecordGroup>()
+class ServiceApiImpl(private val context: Context) : IDvrService.Stub() {
+    companion object {
+        private const val MOCK_FILE = "mock_video.ts"
+        private const val MOCK_RECORD_COUNT = 50
+    }
 
-    private val mListeners = mutableListOf<OnRecordUpdateListener>()
+    private val mRecordList: MutableList<RecordGroup> = mutableListOf()
 
-    private val mStateListeners = mutableListOf<OnStateUpdateListener>()
-
-    private val mConfigureListeners = mutableListOf<OnConfigureUpdateListener>()
-
-    private var mState = DvrState(true, DvrState.ErrorType.None)
+    private var mState: DvrState = DvrState(true, DvrState.ErrorType.None)
         set(value) {
             field = value
-            mStateListeners.forEach {
-                it.onStateUpdate()
-            }
+            mDvrEventCallback.forEach { it.onStateUpdate(field) }
         }
 
-    private var isMounted = true
+    private var mConfigure: DvrConfigure = DvrConfigure(RecordDuration.OneMin, RecordResolution.FHD)
         set(value) {
             field = value
-            mState = mState.copy(isAvailable = isMounted, errorType = if(isMounted) DvrState.ErrorType.None else DvrState.ErrorType.FlashDriveNotAvailable)
+            mDvrEventCallback.forEach { it.onConfigureUpdate(field) }
         }
 
-    private var mConfigure : DvrConfigure = DvrConfigure(RecordDuration.FiveMin, RecordResolution.FHD)
+    private var mDvrEventCallback: MutableList<IDvrEventCallback> = mutableListOf()
 
     init {
-        val mockVideoPath = File(context.cacheDir, "mock.mp4")
+        // Copy mock video to Cache folder from assets
+        val inputStream = context.assets.open("mock_video.ts")
+        val outputStream = context.openFileOutput(MOCK_FILE, Context.MODE_PRIVATE)
+        inputStream.copyTo(outputStream)
+        inputStream.close()
+        outputStream.close()
 
-        context.assets.open("mock_video.mp4").use { input ->
-            FileOutputStream(mockVideoPath).use { output ->
-                input.copyTo(output)
-            }
-        }
+        // Generate mock data. the time duration is 1 min
+        val durationMs = 60L * 1000L
+        val startTime = System.currentTimeMillis() - durationMs * MOCK_RECORD_COUNT.toLong()
 
-        val mockUri : Uri = Uri.fromFile(mockVideoPath)
-
-        //random generate 200 record grout with four record file, timestamp is millisec, time scale is min for goup, second for file . filename is {timestamp}.mp4
-        val recordCount = 200
-        val time = System.currentTimeMillis()
-        for (i in 1..200) {
-            // time + i * 1 min
-            val min = time + i * 60 * 1000
-            val fileList = buildList<RecordFile>(CamLocation.entries.size){
-                // Create random second between 0 and 59
-                CamLocation.entries.forEach {
-                    val timeWithSec = min + Random.nextInt(0, 60) * 1000
-                    add(RecordFile("${timeWithSec}.mp4", timeWithSec, it, mockUri))
+        for (i in 0 until MOCK_RECORD_COUNT) {
+            val timestamp = startTime + i * durationMs
+            val mockRecordList: List<RecordFile> = buildList {
+                CamLocation.entries.forEach { location ->
+                    this.add(
+                        RecordFile(
+                            location.name,
+                            timestamp,
+                            location,
+                            Uri.fromFile(context.getFileStreamPath(MOCK_FILE))
+                        )
+                    )
                 }
             }
-            mRecordGroups.add(RecordGroup(min, fileList, RecordType.Normal))
+            val recordGroup = RecordGroup(timestamp, mockRecordList, RecordType.Normal)
+            mRecordList.add(recordGroup)
         }
     }
 
-    override fun updateState(state: DvrState) {
-
-    }
-
-    override fun getRecordGoups(): MutableList<RecordGroup> {
-        return if(isMounted) mRecordGroups else mutableListOf()
-    }
+    override fun getRecordGoups(): List<RecordGroup> = mRecordList
 
     override fun getState(): DvrState = mState
+
     override fun getConfigure(): DvrConfigure = mConfigure
 
-    override fun updataConfigure(configure: DvrConfigure){
-        mState = mState.copy(isAvailable = false, errorType = DvrState.ErrorType.InRestart)
-        Thread.sleep(2000)
-        mState = mState.copy(isAvailable = true, errorType = DvrState.ErrorType.None)
+    override fun updataConfigure(configure: DvrConfigure) {
+        mState = DvrState(false, DvrState.ErrorType.None)
         mConfigure = configure
-        mConfigureListeners.forEach { it.onUpdate() }
+        Thread.sleep(1000)
+        mState = DvrState(true, DvrState.ErrorType.None)
     }
 
-    override fun lockFile(recordGroup: RecordGroup) {
-        runWithUpdateNotify {
-            val index = mRecordGroups.indexOfFirst { it.timestamp == recordGroup.timestamp }
-            mRecordGroups[index] = recordGroup.copy(type = RecordType.Locked)
-        }
+    override fun lockFile(recordGroup: RecordGroup) = updateRecord(recordGroup) { index ->
+        mRecordList[index] = mRecordList[index].copy(type = RecordType.Locked)
     }
 
-    override fun unlockFile(recordGroup: RecordGroup) {
-        runWithUpdateNotify {
-            val index = mRecordGroups.indexOfFirst { it.timestamp == recordGroup.timestamp }
-            mRecordGroups[index] = recordGroup.copy(type = RecordType.Normal)
-        }
+    override fun unlockFile(recordGroup: RecordGroup) = updateRecord(recordGroup) { index ->
+        mRecordList[index] = mRecordList[index].copy(type = RecordType.Normal)
     }
 
-    override fun deleteFile(recordGroup: RecordGroup?) {
-        runWithUpdateNotify {
-            mRecordGroups.remove(recordGroup)
-        }
+    override fun deleteFile(recordGroup: RecordGroup) = updateRecord(recordGroup) { index ->
+        mRecordList.removeAt(index)
     }
 
-    override fun registerListener(listener: OnRecordUpdateListener) : Unit = if(!mListeners.add(listener)) throw Exception("Listener already registered") else Unit
-    override fun unregisterListener(listener: OnRecordUpdateListener?) : Unit = if(!mListeners.remove(listener)) throw Exception("Listener not registered") else Unit
-    override fun registerStateListener(listener: OnStateUpdateListener) : Unit = if(!mStateListeners.add(listener)) throw Exception("Listener already registered") else Unit
-    override fun unregisterStateListener(listener: OnStateUpdateListener) : Unit = if(!mStateListeners.remove(listener)) throw Exception("Listener not registered") else Unit
-    override fun registerConfigureListener(listener: OnConfigureUpdateListener?) : Unit = if(!mConfigureListeners.add(listener!!)) throw Exception("Listener already registered") else Unit
-    override fun unregisterConfigureListener(listener: OnConfigureUpdateListener?) : Unit = if(!mConfigureListeners.remove(listener!!)) throw Exception("Listener not registered") else Unit
+    override fun registerCallback(callback: IDvrEventCallback) {
+        if (!mDvrEventCallback.contains(callback))
+            mDvrEventCallback.add(callback)
+    }
+
+    override fun unregisterCallback(callback: IDvrEventCallback) {
+        if (mDvrEventCallback.contains(callback))
+            mDvrEventCallback.remove(callback)
+    }
+
 
     override fun unmountFlash() {
-        Thread.sleep(1000)
-        isMounted = false
+        mState = DvrState(false, DvrState.ErrorType.FlashDriveNotAvailable)
     }
 
+    private inline fun updateRecord(recordGroup: RecordGroup, action: (Int) -> Unit) {
+        val index = mRecordList.indexOf(recordGroup)
 
-    private inline fun runWithUpdateNotify(crossinline block: () -> Unit){
-        block()
-        mListeners.forEach { it.onUpdate() }
+        if (index != -1) {
+            action(index)
+            mDvrEventCallback.forEach { it.onRecordUpdate(mRecordList) }
+        }
     }
 }
