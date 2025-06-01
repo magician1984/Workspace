@@ -5,24 +5,18 @@ import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_ui.entity.DvrStateData
 
 interface IDataSource {
-    fun interface EventListener{
-        fun onUpdate(records : List<RecordGroup>)
-    }
-
-    fun interface DvrStateListener{
-        fun onUpdate(state : DvrStateData)
+    interface EventListener{
+        fun onRecordUpdate()
+        fun onStateUpdate()
     }
 
     val dvrState : DvrStateData
+    val recordGroups : List<RecordGroup>
 
-    fun getAllRecords() : List<RecordGroup>
     fun registerUpdateListener(listener: EventListener)
-    fun registerDvrStateListener(listener: DvrStateListener)
-    fun lockRecord(record: RecordGroup)
-    fun unlockRecord(record: RecordGroup)
-    fun deleteRecord(record: RecordGroup)
+    fun lockRecords(record: List<RecordGroup>)
+    fun unlockRecords(record: List<RecordGroup>)
+    fun deleteRecords(record: List<RecordGroup>)
     fun unmountStorage()
-    @Deprecated("Not support")
-    fun updateConfigure(configure: DvrConfigure)
     fun getConfigure() : DvrConfigure
 }

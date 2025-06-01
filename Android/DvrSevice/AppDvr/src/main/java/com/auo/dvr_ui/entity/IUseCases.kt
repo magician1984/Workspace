@@ -1,16 +1,16 @@
 package com.auo.dvr_ui.entity
 
-import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.RecordGroup
+import com.auo.dvr_core.RecordType
 
 interface IUseCase
 
-interface IUseCaseGetListFiles : IUseCase{
-    operator fun invoke() : List<RecordGroup>
+interface IUseCaseGetRecordGroups : IUseCase{
+    operator fun invoke(set: Set<RecordType>) : List<RecordGroup>
 }
 
 interface IUseCaseRegisterListener : IUseCase{
-    operator fun invoke(callback : (List<RecordGroup>) -> Unit)
+    operator fun invoke(onRecordGroupUpdate : () -> Unit, onDvrStateUpdate : () -> Unit)
 }
 
 interface IUseCaseLockGroups : IUseCase{
@@ -27,18 +27,6 @@ interface IUseCaseDeleteGroups : IUseCase{
 
 interface IUseCaseGetDvrState : IUseCase{
     operator fun invoke() : DvrStateData
-}
-
-interface IUseCaseRegisterDvrStateListener : IUseCase{
-    operator fun invoke(callback : (DvrStateData) -> Unit)
-}
-
-interface IUseCaseGetConfigure : IUseCase{
-    operator fun invoke() : DvrConfigure
-}
-
-interface IUseCaseSetConfigure : IUseCase{
-    operator fun invoke(configure : DvrConfigure)
 }
 
 interface IUseCaseUnmountStorage : IUseCase{

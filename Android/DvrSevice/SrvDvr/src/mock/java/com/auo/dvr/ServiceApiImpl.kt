@@ -16,6 +16,7 @@ import com.auo.dvr_core.RecordType
 class ServiceApiImpl(private val context: Context) : IDvrService.Stub() {
     companion object {
         private const val MOCK_FILE = "mock_video.ts"
+        private const val MOCK_THUMBNAIL = "mock_video.png"
         private const val MOCK_RECORD_COUNT = 50
     }
 
@@ -37,11 +38,17 @@ class ServiceApiImpl(private val context: Context) : IDvrService.Stub() {
 
     init {
         // Copy mock video to Cache folder from assets
-        val inputStream = context.assets.open("mock_video.ts")
+        val inputStream = context.assets.open(MOCK_FILE)
         val outputStream = context.openFileOutput(MOCK_FILE, Context.MODE_PRIVATE)
         inputStream.copyTo(outputStream)
         inputStream.close()
         outputStream.close()
+
+        // Copy mock thumbnail to Cache folder from assets
+        val thumbnailInputStream = context.assets.open(MOCK_THUMBNAIL)
+        val thumbnailOutputStream = context.openFileOutput(MOCK_THUMBNAIL, Context.MODE_PRIVATE)
+        thumbnailInputStream.copyTo(thumbnailOutputStream)
+        thumbnailInputStream.close()
 
         // Generate mock data. the time duration is 1 min
         val durationMs = 60L * 1000L
@@ -56,7 +63,8 @@ class ServiceApiImpl(private val context: Context) : IDvrService.Stub() {
                             location.name,
                             timestamp,
                             location,
-                            Uri.fromFile(context.getFileStreamPath(MOCK_FILE))
+                            Uri.fromFile(context.getFileStreamPath(MOCK_FILE)),
+                            Uri.fromFile(context.getFileStreamPath(MOCK_THUMBNAIL))
                         )
                     )
                 }
@@ -79,15 +87,15 @@ class ServiceApiImpl(private val context: Context) : IDvrService.Stub() {
         mState = DvrState(true, DvrState.ErrorType.None)
     }
 
-    override fun lockFile(recordGroup: RecordGroup) = updateRecord(recordGroup) { index ->
+    override fun lockFile(recordGroups: List<RecordGroup>) = updateRecord(recordGroups) { index ->
         mRecordList[index] = mRecordList[index].copy(type = RecordType.Locked)
     }
 
-    override fun unlockFile(recordGroup: RecordGroup) = updateRecord(recordGroup) { index ->
+    override fun unlockFile(recordGroups: List<RecordGroup>) = updateRecord(recordGroups) { index ->
         mRecordList[index] = mRecordList[index].copy(type = RecordType.Normal)
     }
 
-    override fun deleteFile(recordGroup: RecordGroup) = updateRecord(recordGroup) { index ->
+    override fun deleteFile(recordGroups: List<RecordGroup>) = updateRecord(recordGroups) { index ->
         mRecordList.removeAt(index)
     }
 
@@ -106,12 +114,15 @@ class ServiceApiImpl(private val context: Context) : IDvrService.Stub() {
         mState = DvrState(false, DvrState.ErrorType.FlashDriveNotAvailable)
     }
 
-    private inline fun updateRecord(recordGroup: RecordGroup, action: (Int) -> Unit) {
-        val index = mRecordList.indexOf(recordGroup)
+    private inline fun updateRecord(recordGroups: List<RecordGroup>, action: (Int) -> Unit) {
+        for (group in recordGroups) {
+            val index = mRecordList.indexOf(group)
 
-        if (index != -1) {
-            action(index)
-            mDvrEventCallback.forEach { it.onRecordUpdate(mRecordList) }
+            if (index != -1) {
+                action(index)
+            }
         }
+
+        mDvrEventCallback.forEach { it.onRecordUpdate(mRecordList) }
     }
 }

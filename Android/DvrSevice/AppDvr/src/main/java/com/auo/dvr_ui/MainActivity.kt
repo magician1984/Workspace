@@ -14,16 +14,9 @@ import com.auo.dvr_ui.datasource.Datasource
 import com.auo.dvr_ui.presentation.Presenter
 import com.auo.dvr_ui.usecase.IDataSource
 import com.auo.dvr_ui.usecase.IPresenter
-import com.auo.dvr_ui.usecase.UseCaseDeleteFile
-import com.auo.dvr_ui.usecase.UseCaseGetCacheFile
-import com.auo.dvr_ui.usecase.UseCaseGetConfigure
 import com.auo.dvr_ui.usecase.UseCaseGetDvrState
 import com.auo.dvr_ui.usecase.UseCaseGetListFiles
-import com.auo.dvr_ui.usecase.UseCaseLockFile
-import com.auo.dvr_ui.usecase.UseCaseRegisterDvrStateListener
 import com.auo.dvr_ui.usecase.UseCaseRegisterListener
-import com.auo.dvr_ui.usecase.UseCaseSetConfigure
-import com.auo.dvr_ui.usecase.UseCaseUnlockFile
 import com.auo.dvr_ui.usecase.UseCaseUnmountStorage
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.Condition
@@ -78,7 +71,7 @@ class MainActivity : ComponentActivity() {
     private fun initializePresenter(){
         mPresenter = Presenter(this)
 
-        mPresenter.onLoading()
+        mPresenter.render()
     }
 
     private fun initializeDataSource(){
@@ -93,27 +86,15 @@ class MainActivity : ComponentActivity() {
             }
             Log.d("MainActivity", "initializeDataSource: service ready")
 
-            mDataSource = Datasource(mService, cacheDir)
+            mDataSource = Datasource(mService)
 
             Log.d("MainActivity", "initializeDataSource: datasource ready")
             mPresenter.summitUseCases(
                 UseCaseGetListFiles(mDataSource),
                 UseCaseRegisterListener(mDataSource),
-                UseCaseLockFile(mDataSource),
-                UseCaseUnlockFile(mDataSource),
-                UseCaseDeleteFile(mDataSource),
-                UseCaseGetCacheFile(mDataSource),
                 UseCaseGetDvrState(mDataSource),
-                UseCaseRegisterDvrStateListener(mDataSource),
-                UseCaseGetConfigure(mDataSource),
-                UseCaseSetConfigure(mDataSource),
                 UseCaseUnmountStorage(mDataSource)
             )
-
-            Log.d("MainActivity", "initializeDataSource: presenter ready")
-            runOnUiThread {
-                mPresenter.onReady()
-            }
         }
     }
 }

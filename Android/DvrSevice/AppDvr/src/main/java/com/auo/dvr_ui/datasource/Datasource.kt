@@ -16,16 +16,14 @@ class Datasource(
 ) : IDataSource {
     private var mListeners: MutableList<IDataSource.EventListener> = mutableListOf()
 
-    private var mStateListeners: MutableList<IDataSource.DvrStateListener> = mutableListOf()
-
     private var _dvrState: DvrStateData = DvrStateData(DvrState(false, DvrState.ErrorType.None))
-        set(value) {
-            field = value
-            mStateListeners.forEach { it.onUpdate(field) }
-        }
+
+    private val _recordGroups: MutableList<RecordGroup> = mutableListOf()
 
     override val dvrState: DvrStateData
         get() = _dvrState
+    override val recordGroups: List<RecordGroup>
+        get() = _recordGroups
 
     private val errorMessages: HashMap<DvrState.ErrorType, String> = hashMapOf()
 
@@ -36,56 +34,41 @@ class Datasource(
         errorMessages[DvrState.ErrorType.InternalError] = "Internal error"
         errorMessages[DvrState.ErrorType.InRestart] = "In restarting"
 
-        service.registerCallback(object : IDvrEventCallback.Stub(){
-            override fun onRecordUpdate(groups: List<RecordGroup>) {
-                mListeners.forEach { it.onUpdate(groups) }
-            }
+        service.registerCallback(object : IDvrEventCallback.Stub() {
+            override fun onRecordUpdate(groups: List<RecordGroup>) = updateRecordGroups(groups)
 
-            override fun onStateUpdate(state: DvrState) {
-                updateDvrState(state)
-            }
+            override fun onStateUpdate(state: DvrState) = updateDvrState(state)
 
+            //Nothing need to do
             override fun onConfigureUpdate(configure: DvrConfigure?) {
-                TODO("Not yet implemented")
             }
         })
 
         updateDvrState(service.state)
     }
 
-    override fun getAllRecords(): List<RecordGroup> = withServiceAvailable(onAvailable = {
-        service.recordGoups
-    }, onUnavailable = { emptyList() })
-
     override fun registerUpdateListener(listener: IDataSource.EventListener) {
         mListeners.add(listener)
     }
 
-    override fun registerDvrStateListener(listener: IDataSource.DvrStateListener) {
-        mStateListeners.add(listener)
-    }
-
-    override fun lockRecord(record: RecordGroup): Unit = withServiceAvailable(onAvailable = {
+    override fun lockRecords(record: List<RecordGroup>) = withServiceAvailable(onAvailable = {
         service.lockFile(record)
-    }, onUnavailable = {})
+    }, onUnavailable = {
+    })
 
-    override fun unlockRecord(record: RecordGroup): Unit = withServiceAvailable(onAvailable = {
+    override fun unlockRecords(record: List<RecordGroup>) = withServiceAvailable(onAvailable = {
         service.unlockFile(record)
-    }, onUnavailable = {})
+    }, onUnavailable = {
+    })
 
-    override fun deleteRecord(record: RecordGroup): Unit = withServiceAvailable(onAvailable = {
+    override fun deleteRecords(record: List<RecordGroup>) = withServiceAvailable(onAvailable = {
         service.deleteFile(record)
-    }, onUnavailable = {})
+    }, onUnavailable = {
+    })
 
     override fun unmountStorage(): Unit = withServiceAvailable(onAvailable = {
         service.unmountFlash()
     }, onUnavailable = {})
-
-    @Deprecated("Not support")
-    override fun updateConfigure(configure: DvrConfigure): Unit =
-        withServiceAvailable(onAvailable = {
-            service.updataConfigure(configure)
-        }, onUnavailable = {})
 
     override fun getConfigure(): DvrConfigure = withServiceAvailable(
         onAvailable = {
@@ -102,6 +85,13 @@ class Datasource(
         val message: String = errorMessages.getOrDefault(state.errorType, "")
 
         _dvrState = DvrStateData(state, message)
+        mListeners.forEach { it.onStateUpdate() }
+    }
+
+    private fun updateRecordGroups(groups: List<RecordGroup>) {
+        _recordGroups.clear()
+        _recordGroups.addAll(groups)
+        mListeners.forEach { it.onRecordUpdate() }
     }
 
     private inline fun <R> withServiceAvailable(

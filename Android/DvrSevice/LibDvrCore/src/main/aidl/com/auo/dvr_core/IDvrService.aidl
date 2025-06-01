@@ -15,9 +15,9 @@ interface IDvrService {
 
     void updataConfigure(in DvrConfigure configure);
 
-    void lockFile(in RecordGroup recordGroup);
-    void unlockFile(in RecordGroup recordGroup);
-    void deleteFile(in RecordGroup recordGroup);
+    void lockFile(in List<RecordGroup> recordGroup);
+    void unlockFile(in List<RecordGroup> recordGroup);
+    void deleteFile(in List<RecordGroup> recordGroup);
 
     void registerCallback(in IDvrEventCallback callback);
     void unregisterCallback(in IDvrEventCallback callback);
