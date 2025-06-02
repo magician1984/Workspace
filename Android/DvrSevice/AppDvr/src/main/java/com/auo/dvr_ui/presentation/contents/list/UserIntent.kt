@@ -4,6 +4,7 @@ import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_ui.presentation.Presenter
 
 sealed class UserIntent : Presenter.IUserIntent{
+    data object Init : UserIntent()
     data class ItemClicked(val item: RecordGroup) : UserIntent()
     data object Delete : UserIntent()
     data object Lock : UserIntent()

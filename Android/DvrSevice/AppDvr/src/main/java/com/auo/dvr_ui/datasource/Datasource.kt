@@ -45,6 +45,8 @@ class Datasource(
         })
 
         updateDvrState(service.state)
+
+        updateRecordGroups(service.recordGoups)
     }
 
     override fun registerUpdateListener(listener: IDataSource.EventListener) {

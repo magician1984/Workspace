@@ -1,5 +1,6 @@
 package com.auo.dvr_ui.usecase
 
+import android.util.Log
 import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_core.RecordType
 import com.auo.dvr_ui.entity.DvrStateData
@@ -13,7 +14,12 @@ import com.auo.dvr_ui.entity.IUseCaseUnmountStorage
 
 class UseCaseGetListFiles(private val datasource: IDataSource) : IUseCaseGetRecordGroups {
     override fun invoke(set: Set<RecordType>): List<RecordGroup> {
-        return datasource.recordGroups.filter { it.type in set }
+        Log.d("UseCaseGetListFiles", "invoke: $set")
+        val list : List<RecordGroup> = datasource.recordGroups
+        Log.d("UseCaseGetListFiles", "invoke: $list")
+        val filterList : List<RecordGroup> = list.filter { it.type in set }
+        Log.d("UseCaseGetListFiles", "invoke: $filterList")
+        return filterList
     }
 }
 

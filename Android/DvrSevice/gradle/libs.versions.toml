@@ -17,6 +17,8 @@ junitJupiter = "5.8.1"
 ffmpegKitFull = "6.0.LTS"
 exoplayerCore = "2.19.1"
 media3Exoplayer = "1.6.0"
+coilCompose = "2.7.0"
+foundation = "1.8.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -42,6 +44,8 @@ junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.r
 ffmpeg-kit-full = { group = "com.arthenica", name = "ffmpeg-kit-full", version.ref = "ffmpegKitFull" }
 exoplayer-core = { group = "com.google.android.exoplayer", name = "exoplayer-core", version.ref = "exoplayerCore" }
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version = "1.5.1" }
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coilCompose" }
+androidx-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

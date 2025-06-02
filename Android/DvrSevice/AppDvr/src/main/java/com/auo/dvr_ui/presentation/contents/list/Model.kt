@@ -1,46 +1,91 @@
 package com.auo.dvr_ui.presentation.contents.list
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
+import android.util.Log
 import com.auo.dvr_core.RecordGroup
-import com.auo.dvr_ui.entity.IUseCaseDeleteGroups
-import com.auo.dvr_ui.entity.IUseCaseGetRecordGroups
-import com.auo.dvr_ui.entity.IUseCaseLockGroups
-import com.auo.dvr_ui.entity.IUseCaseRegisterListener
-import com.auo.dvr_ui.entity.IUseCaseUnlockGroups
-import com.auo.dvr_ui.entity.IUseCaseUnmountStorage
+import com.auo.dvr_core.RecordType
 import com.auo.dvr_ui.presentation.Presenter
-import com.auo.dvr_ui.usecase.UseCaseGetDvrState
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
-class Model(
+internal class Model(
     private val onReplayRequest: (RecordGroup) -> Unit,
-    override val scope: CoroutineScope,
-    private val useCaseGetRecordGroups: IUseCaseGetRecordGroups,
-    private val useCaseRegisterListener: IUseCaseRegisterListener,
-    private val useCaseGetDvrState: UseCaseGetDvrState,
-    private val useCaseLockGroups: IUseCaseLockGroups,
-    private val useCaseUnlockGroups: IUseCaseUnlockGroups,
-    private val useCaseDeleteGroups: IUseCaseDeleteGroups,
-    private val useCaseUnmountStorage: IUseCaseUnmountStorage
-) : Presenter.IModel<UiState, UserIntent, Effect> {
-    private val _state: State<UiState> = mutableStateOf(UiState(
-        groupList = emptyList(),
-        selectedGroups = emptyList(),
-        selectMode = false,
-        displayType = UiState.DisplayType.All
-    ))
+    val scope: CoroutineScope,
+    private val getRecordGroups: (Set<RecordType>) -> List<RecordGroup>,
+    private val registerListener: (onRecordGroupUpdate: () -> Unit) -> Unit,
+    private val lockGroups: (List<RecordGroup>) -> Unit,
+    private val unlockGroups: (List<RecordGroup>) -> Unit,
+    private val deleteGroups: (List<RecordGroup>) -> Unit,
+) : Presenter.IModel<UiState, UserIntent, Effect>(scope) {
 
-    private val _effect: MutableState<Effect?> = mutableStateOf(null)
+    private val _state : MutableStateFlow<UiState> = MutableStateFlow(
+        UiState(
+            groupList = emptyList(),
+            selectedGroups = emptyList(),
+            selectMode = false,
+            displayType = UiState.DisplayType.Normal
+        )
+    )
 
-    override val state: State<UiState>
+    private val _effect : MutableStateFlow<Effect?> = MutableStateFlow(null)
+
+    override val state: StateFlow<UiState>
         get() = _state
-    override val effect: State<Effect?>
+    override val effect: StateFlow<Effect?>
         get() = _effect
 
-    override fun handleUserIntent(intent: State<UserIntent>) {
-        TODO("Not yet implemented")
+    override fun handleUserIntent(intent: UserIntent) {
+        scope.launch {
+            Log.d("ListModel", "Intent: $intent")
+            when(intent){
+                UserIntent.Delete -> deleteGroups(_state.value.selectedGroups)
+                is UserIntent.DisplayTypeChanged ->{
+                    _state.value = _state.value.copy(displayType = intent.type)
+                    updateGroups()
+                }
+                is UserIntent.ItemClicked -> onItemClicked(intent.item)
+                UserIntent.Lock -> lockGroups(_state.value.selectedGroups)
+                UserIntent.SelectModeChanged -> {
+                    val selectMode = !_state.value.selectMode
+                    _state.value = _state.value.copy(selectMode = selectMode)
+                }
+                UserIntent.Unlock -> unlockGroups(_state.value.selectedGroups)
+                UserIntent.Init -> {
+                    registerListener(::updateGroups)
+                    updateGroups()
+                }
+            }
+        }
     }
 
+    private fun updateGroups(){
+        val filter = when(_state.value.displayType){
+            UiState.DisplayType.Normal -> setOf(RecordType.Normal, RecordType.Locked)
+            UiState.DisplayType.Incident -> setOf(RecordType.Protected)
+            UiState.DisplayType.Locked -> setOf(RecordType.Locked)
+        }
+
+        val list = getRecordGroups(filter)
+
+        _state.value = _state.value.copy(
+            groupList = list,
+            selectedGroups = emptyList()
+        )
+    }
+
+    private fun onItemClicked(item: RecordGroup){
+        val selectMode = _state.value.selectMode
+        if(selectMode){
+            val selected = _state.value.selectedGroups.toMutableList()
+            if(selected.contains(item)){
+                selected.remove(item)
+            }else {
+                selected.add(item)
+            }
+            _state.value = _state.value.copy(selectedGroups = selected)
+        }else{
+            onReplayRequest(item)
+        }
+    }
 }

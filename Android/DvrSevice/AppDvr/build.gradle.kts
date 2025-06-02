@@ -33,9 +33,7 @@ android {
             useSupportLibrary = true
         }
 
-        ndk {
-            abiFilters += listOf("arm64-v8a")
-        }
+
 
     }
 
@@ -74,6 +72,10 @@ android {
         }
         create("real") {
             dimension = "prototype"
+
+            ndk {
+                abiFilters += listOf("arm64-v8a")
+            }
         }
     }
 }
@@ -91,6 +93,8 @@ dependencies {
     implementation(project(":LibDvrCore"))
     implementation(project(":SrvDvr"))
     implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.foundation)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

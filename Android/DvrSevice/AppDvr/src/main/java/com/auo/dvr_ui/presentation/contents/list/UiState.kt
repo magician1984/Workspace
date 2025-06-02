@@ -9,9 +9,9 @@ data class UiState(
     val selectMode : Boolean,
     val displayType : DisplayType,
 ) : Presenter.IUiState{
-    enum class DisplayType{
-        All,
-        Event,
-        Locked
+    enum class DisplayType(val code : Int){
+        Normal(0),
+        Incident(1),
+        Locked(2)
     }
 }

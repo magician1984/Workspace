@@ -11,7 +11,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -23,15 +22,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.auo.dvr_ui.entity.IUseCase
+import com.auo.dvr_ui.entity.IUseCaseDeleteGroups
+import com.auo.dvr_ui.entity.IUseCaseGetRecordGroups
+import com.auo.dvr_ui.entity.IUseCaseLockGroups
+import com.auo.dvr_ui.entity.IUseCaseRegisterListener
+import com.auo.dvr_ui.entity.IUseCaseUnlockGroups
 import com.auo.dvr_ui.ui.theme.DvrServiceTheme
 import com.auo.dvr_ui.usecase.IPresenter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import com.auo.dvr_ui.presentation.contents.list.View as ListView
+import kotlinx.coroutines.flow.StateFlow
 import com.auo.dvr_ui.presentation.contents.list.Model as ListModel
-import com.auo.dvr_ui.presentation.contents.replay.View as ReplayView
-import com.auo.dvr_ui.presentation.contents.replay.Model as ReplayModel
+import com.auo.dvr_ui.presentation.contents.list.View as ListView
 
 private typealias ViewContent = @Composable (PaddingValues) -> Unit
 
@@ -44,41 +47,45 @@ class Presenter(
 
     internal interface IEffect
 
-    internal interface IModel<S : IUiState, I : IUserIntent, E : IEffect> {
-        val state: State<S>
-        val effect: State<E?>
-        val scope: CoroutineScope
-        fun handleUserIntent(intent: State<I>)
+    internal abstract class IModel<S : IUiState, I : IUserIntent, E : IEffect>(
+        private val scope: CoroutineScope
+    ) {
+        abstract val state: StateFlow<S>
+        abstract val effect: StateFlow<E?>
+
+        abstract fun handleUserIntent(intent: I)
     }
 
-    internal interface IView<S : IUiState, I : IUserIntent, E : IEffect> {
-        val userIntent: State<I>
-        fun handleUiState(state: State<S>)
-        fun handleEffect(effect: State<E?>)
-
+    internal abstract class IView<S : IUiState, I : IUserIntent, E : IEffect>(
+        protected val state: StateFlow<S>,
+        protected val effect: StateFlow<E?>,
+        protected val intentHandler: (I) -> Unit
+    ) {
         @Composable
-        fun Draw(modifier: Modifier, arg : Any? = null)
+        abstract fun Draw(modifier: Modifier)
     }
 
-    private val useCaseList: MutableList<IUseCase> = mutableListOf()
+    private val mUseCaseList: MutableList<IUseCase> = mutableListOf()
 
-    private val backgroundScope = CoroutineScope(Dispatchers.IO)
+    private val mModelList: MutableList<IModel<*, *, *>> = mutableListOf()
 
-    private val currentView: MutableState<ViewContent> =
+    private val mBackgroundScope = CoroutineScope(Dispatchers.IO)
+
+    private val mCurrentView: MutableState<ViewContent> =
         mutableStateOf({ innerPadding -> OnLoading(innerPadding) })
 
     override fun summitUseCases(vararg useCases: IUseCase) {
-        useCaseList.clear()
-        useCaseList.addAll(useCases)
+        mUseCaseList.clear()
+        mUseCaseList.addAll(useCases)
 
-        currentView.value = { innerPadding -> OnReady(innerPadding) }
+        mCurrentView.value = { innerPadding -> OnReady(innerPadding) }
     }
 
     override fun render() {
         renderer.setContent {
             DvrServiceTheme {
                 Scaffold { innerPadding ->
-                    currentView.value(innerPadding)
+                    mCurrentView.value(innerPadding)
                 }
             }
         }
@@ -86,34 +93,17 @@ class Presenter(
 
     @Composable
     private fun OnReady(innerPadding: PaddingValues) {
+        val listView: IView<*, *, *>
         try {
-            val listView: ListView = ListView()
-            val listModel: ListModel = ListModel(
-                onReplayRequest = {},
-                scope = backgroundScope,
-                useCaseGetRecordGroups = findUseCase(),
-                useCaseRegisterListener = findUseCase(),
-                useCaseGetDvrState = findUseCase(),
-                useCaseLockGroups = findUseCase(),
-                useCaseUnlockGroups = findUseCase(),
-                useCaseDeleteGroups = findUseCase(),
-                useCaseUnmountStorage = findUseCase()
-            )
+            val listModel: ListModel = getModel()
+            listView = ListView(listModel.state, listModel.effect, listModel::handleUserIntent)
 
-            bindViewAndModel(listView, listModel)
-
-            val replayView: ReplayView = ReplayView()
-            val replayModel: ReplayModel = ReplayModel(
-                onBack = {},
-                scope = backgroundScope
-            )
-
-            bindViewAndModel(replayView, replayModel)
-            
-
-        }catch (e : IllegalStateException){
-            currentView.value = { padding -> OnError(padding, e.message ?: "Unknown Error") }
+        } catch (e: IllegalStateException) {
+            mCurrentView.value = { padding -> OnError(padding, e.message ?: "Unknown Error") }
+            return
         }
+
+        listView.Draw(modifier = Modifier.padding(innerPadding))
     }
 
     @Composable
@@ -144,27 +134,50 @@ class Presenter(
     }
 
     @Composable
-    private fun OnError(innerPadding: PaddingValues, message : String){
+    private fun OnError(innerPadding: PaddingValues, message: String) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-        ){
+        ) {
             Text(
                 modifier = Modifier.align(Alignment.Center),
                 text = message,
                 textAlign = TextAlign.Center,
-                fontSize = 42.sp)
+                fontSize = 42.sp
+            )
+        }
+    }
+
+    private fun onDvrStateUpdate() {
+
+    }
+
+    private inline fun <reified T : IModel<*, *, *>> getModel(): T {
+        return mModelList.find { it is T } as? T ?: run {
+            when (T::class) {
+                ListModel::class -> ListModel(
+                    onReplayRequest = {},
+                    scope = mBackgroundScope,
+                    getRecordGroups = { findUseCase<IUseCaseGetRecordGroups>().invoke(set = it) },
+                    registerListener = {
+                        findUseCase<IUseCaseRegisterListener>().invoke(
+                            it,
+                            ::onDvrStateUpdate
+                        )
+                    },
+                    lockGroups = { findUseCase<IUseCaseLockGroups>().invoke(it) },
+                    unlockGroups = { findUseCase<IUseCaseUnlockGroups>().invoke(it) },
+                    deleteGroups = { findUseCase<IUseCaseDeleteGroups>().invoke(it) }
+                ) as T
+
+                else -> error("Model not found: ${T::class.java.name}")
+            }
         }
     }
 
     private inline fun <reified T : IUseCase> findUseCase(): T {
-        return useCaseList.find { it is T } as? T ?: error("UseCase not found: ${T::class.java.name}")
-    }
-
-    private fun <S : IUiState, I : IUserIntent, E : IEffect> bindViewAndModel(view : IView<S, I, E>, model : IModel<S, I, E>){
-        view.handleEffect(model.effect)
-        view.handleUiState(model.state)
-        model.handleUserIntent(view.userIntent)
+        return mUseCaseList.find { it is T } as? T
+            ?: error("UseCase not found: ${T::class.java.name}")
     }
 }
