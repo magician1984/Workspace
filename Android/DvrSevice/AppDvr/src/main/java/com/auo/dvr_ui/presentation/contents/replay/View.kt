@@ -12,5 +12,6 @@ internal class View(
 ) : Presenter.IView<UiState, UserIntent, Effect>(state, effect, intentHandler) {
     @Composable
     override fun Draw(modifier: Modifier) {
+
     }
 }

@@ -1,55 +1,34 @@
 package com.auo.dvr_ui.presentation.contents.list
 
 import android.content.Context
-import android.util.Log
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import com.auo.dvr_core.RecordGroup
+import androidx.navigation.NavController
 import com.auo.dvr_ui.R
 import com.auo.dvr_ui.presentation.Presenter
+import com.auo.dvr_ui.presentation.contents.list.component.ControlComponent
+import com.auo.dvr_ui.presentation.contents.list.component.ListComponent
+import com.auo.dvr_ui.presentation.contents.list.component.TabComponent
 import kotlinx.coroutines.flow.StateFlow
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 internal class View(
@@ -57,6 +36,11 @@ internal class View(
     effect: StateFlow<Effect?>,
     intentHandler: (UserIntent) -> Unit
 ) : Presenter.IView<UiState, UserIntent, Effect>(state, effect, intentHandler) {
+
+    companion object {
+        private val CONTROL_LAYER_HEIGHT = 96.dp
+        private const val GRID_COLUMN_COUNT = 4
+    }
 
     private val dateFormat: SimpleDateFormat =
         SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
@@ -79,19 +63,29 @@ internal class View(
         }
 
         Column(modifier = modifier) {
-            Box(modifier = Modifier.fillMaxWidth().wrapContentHeight()){
-                TabLayer(
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp)
+            ) {
+                TabComponent.TabLayer(
                     modifier = Modifier
                         .fillMaxWidth(0.5f)
                         .align(Alignment.Center),
                     indicatorColor = highlightColor,
-                    mState.displayType
-                ) {
-                    intentHandler(UserIntent.DisplayTypeChanged(it))
-                }
+                    mState.displayType,
+                    onDisplayTypeChanged = { intentHandler(UserIntent.DisplayTypeChanged(it)) }
+                )
 
-                SelectAllButtonLayer(modifier = Modifier.wrapContentWidth().align(Alignment.CenterEnd), mState.selectMode) {
-                    intentHandler(UserIntent.SelectAll)
+                if(mState.selectMode){
+                    ControlComponent.SelectAllButtonLayer(
+                        modifier = Modifier
+                            .wrapContentWidth()
+                            .align(Alignment.CenterEnd),
+                        boardColor = highlightColor,
+                        onClick = { intentHandler(UserIntent.SelectAll) }
+                    )
                 }
             }
 
@@ -102,205 +96,38 @@ internal class View(
             ) {
                 Spacer(modifier = Modifier.weight(1f))
                 Column(modifier = Modifier.weight(8f)) {
-                    ListLayer(
-                        modifier = Modifier
-                            .weight(1f),
+                    ListComponent.ListLayer(
+                        modifier = Modifier.weight(1f),
                         scrollState = scrollState,
-                        highlightColor = highlightColor,
+                        style = ListComponent.Style(
+                            columnCount = GRID_COLUMN_COUNT,
+                            itemStyle = ListComponent.ItemStyle(
+                                highlightColor = highlightColor,
+                                dateFormat = dateFormat
+                            )
+                        ),
                         selectMode = mState.selectMode,
                         list = mState.groupList,
-                        selectedList = mState.selectedGroups
-                    ) {
-
-                    }
-                    ControlLayer(
-                        modifier = Modifier.fillMaxWidth(),
-                        mState.selectMode
-                    ) {
-
-                    }
-                }
-                ScrollBarLayer(modifier = Modifier.weight(1f), scrollState = scrollState, trackColor = highlightColor, backgroundColor = Color.DarkGray)
-            }
-        }
-    }
-
-    @Composable
-    private fun TabLayer(
-        modifier: Modifier,
-        indicatorColor: Color,
-        displayType: UiState.DisplayType,
-        onDisplayTypeChanged: (UiState.DisplayType) -> Unit
-    ) {
-
-        val tabs = remember {
-            buildList { UiState.DisplayType.entries.forEach { type -> add(type.name) } }
-        }
-
-        val selectedIndex by remember(displayType) {
-            mutableIntStateOf(displayType.code)
-        }
-
-        TabRow(modifier = modifier, selectedTabIndex = selectedIndex) {
-            tabs.forEachIndexed { index, label ->
-                val isSelected = index == selectedIndex
-                Tab(
-                    selected = isSelected,
-                    onClick = {
-                        if (!isSelected)
-                            onDisplayTypeChanged(UiState.DisplayType.entries[index])
-                    },
-                    text = { Text(text = label) },
-                    selectedContentColor = indicatorColor,
-                    unselectedContentColor = Color.White
-                )
-            }
-        }
-    }
-
-    @Composable
-    private fun ListLayer(
-        modifier: Modifier,
-        scrollState: LazyGridState,
-        highlightColor: Color,
-        selectMode: Boolean,
-        list: List<RecordGroup>,
-        selectedList: List<RecordGroup>,
-        onItemClicked: (RecordGroup) -> Unit
-    ) {
-        LazyVerticalGrid(
-            modifier = modifier,
-            columns = GridCells.Fixed(4),
-            state = scrollState
-        ) {
-            items(list.size) { index ->
-                Item(
-                    modifier = Modifier,
-                    highlightColor = highlightColor,
-                    selectMode = selectMode,
-                    item = list[index]
-                )
-            }
-        }
-    }
-
-    @Composable
-    private fun ControlLayer(
-        modifier: Modifier,
-        selectMode: Boolean,
-        onSelectModeChanged: (Boolean) -> Unit
-    ) {
-        Box(modifier = modifier.padding(16.dp)) {
-            if (selectMode) {
-
-            } else {
-                OutlinedButton(
-                    modifier = Modifier.align(Alignment.Center),
-                    onClick = { onSelectModeChanged(true) },
-                    shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color.Transparent,
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text(text = "Select Recording", style = MaterialTheme.typography.labelLarge)
-                }
-            }
-        }
-    }
-
-    @Composable
-    private fun ScrollBarLayer(modifier: Modifier, scrollState: LazyGridState, trackColor : Color, backgroundColor : Color){
-        val density = LocalDensity.current
-        val configuration = LocalConfiguration.current
-        val screenHeight = configuration.screenHeightDp.dp
-
-        Box(
-            modifier = modifier
-                .drawWithContent {
-                    drawContent()
-                    val layoutInfo = scrollState.layoutInfo
-                    val totalItems = layoutInfo.totalItemsCount
-                    val visibleItems = layoutInfo.visibleItemsInfo.size
-
-
-                    if (totalItems == 0 || visibleItems == 0 || totalItems <= visibleItems) return@drawWithContent
-
-                    // Compute scroll progress (0f to 1f)
-                    val scrollProgress = scrollState.firstVisibleItemIndex / (totalItems - visibleItems).toFloat()
-
-                    // Compute thumb height and position
-                    val trackHeight = size.height
-                    val thumbHeight = (visibleItems / totalItems.toFloat()) * trackHeight
-                    val thumbOffset = scrollProgress * (trackHeight - thumbHeight)
-
-                    val thumbWidth = 6.dp.toPx()
-                    val trackWidth = 2.dp.toPx()
-                    val endPadding = 8.dp.toPx()
-                    val cornerRadius = CornerRadius(4.dp.toPx())
-
-                    // Draw track (thin background bar)
-                    drawRoundRect(
-                        color = backgroundColor,
-                        topLeft = Offset(size.width - endPadding, 0f),
-                        size = Size(trackWidth, trackHeight),
-                        cornerRadius = cornerRadius
+                        selectedList = mState.selectedGroups,
+                        onItemClicked = { intentHandler(UserIntent.ItemClicked(it)) }
                     )
 
-                    // Draw thumb
-                    drawRoundRect(
-                        color = trackColor,
-                        topLeft = Offset(size.width - endPadding, thumbOffset),
-                        size = Size(thumbWidth, thumbHeight),
-                        cornerRadius = cornerRadius
+                    ControlComponent.ControlLayer(
+                        modifier = Modifier
+                            .fillMaxWidth(0.75f)
+                            .align(alignment = Alignment.CenterHorizontally)
+                            .height(CONTROL_LAYER_HEIGHT),
+                        highlightColor = highlightColor,
+                        selectedCount = mState.selectedGroups.size,
+                        selectMode = mState.selectMode,
+                        onSelectModeChanged = { intentHandler(UserIntent.SelectModeChanged(it)) },
+                        onDeleteRequest = { intentHandler(UserIntent.Delete) },
+                        onLockRequest = { intentHandler(UserIntent.Lock) },
+                        onUnlockRequest = { intentHandler(UserIntent.Unlock) }
                     )
                 }
-        )
-    }
-
-    @Composable
-    private fun SelectAllButtonLayer(modifier: Modifier, selectMode: Boolean, onClick : () -> Unit){
-        Box(modifier = modifier){
-            if(selectMode){
-                OutlinedButton(
-                    modifier = Modifier.align(Alignment.Center),
-                    onClick = onClick,
-                    shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color.Transparent,
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text(text = "SelectAll", style = MaterialTheme.typography.labelLarge)
-                }
+                Spacer(modifier = Modifier.weight(1f))
             }
         }
     }
-
-    @Composable
-    private fun Item(
-        modifier: Modifier,
-        highlightColor: Color,
-        selectMode: Boolean,
-        item: RecordGroup
-    ) {
-        val model = ImageRequest.Builder(LocalContext.current)
-            .data(item.files[0].thumbnail)
-            .build()
-
-        Column(modifier = modifier.padding(8.dp)) {
-            AsyncImage(
-                model = model,
-                contentDescription = null,
-                modifier = Modifier
-                    .aspectRatio(4f / 3f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(4.dp, highlightColor, RoundedCornerShape(16.dp))
-            )
-            Text(text = dateFormat.format(Date(item.timestamp)))
-        }
-    }
-
 }

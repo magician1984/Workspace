@@ -1,5 +1,6 @@
 package com.auo.dvr_ui.presentation
 
+import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,6 +23,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import androidx.navigation.NavOptions
+import androidx.navigation.Navigator
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.savedstate.SavedState
 import com.auo.dvr_core.DvrState
 import com.auo.dvr_ui.entity.IUseCase
 import com.auo.dvr_ui.entity.IUseCaseDeleteGroups
@@ -39,12 +48,19 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import com.auo.dvr_ui.presentation.contents.list.Model as ListModel
 import com.auo.dvr_ui.presentation.contents.list.View as ListView
+import com.auo.dvr_ui.presentation.contents.replay.Model as ReplayModel
+import com.auo.dvr_ui.presentation.contents.replay.View as ReplayView
 
 private typealias ViewContent = @Composable (PaddingValues) -> Unit
 
 class Presenter(
     private val renderer: ComponentActivity
 ) : IPresenter {
+    sealed class Screen(val route : String){
+        data object List : Screen("list")
+        data object Replay : Screen("replay")
+    }
+
     internal interface IUserIntent
 
     internal interface IUiState
@@ -78,6 +94,8 @@ class Presenter(
     private val mCurrentView: MutableState<ViewContent> =
         mutableStateOf({ innerPadding -> OnLoading(innerPadding) })
 
+    private val mNavHostController : NavHostController = NavHostController(renderer)
+
     override fun summitUseCases(vararg useCases: IUseCase) {
         mUseCaseList.clear()
         mUseCaseList.addAll(useCases)
@@ -99,16 +117,28 @@ class Presenter(
     @Composable
     private fun OnReady(innerPadding: PaddingValues) {
         val listView: IView<*, *, *>
+        val replayView: IView<*, *, *>
+
         try {
             val listModel: ListModel = getModel()
             listView = ListView(listModel.state, listModel.effect, listModel::handleUserIntent)
+
+            val replayModel : ReplayModel = getModel()
+            replayView = ReplayView(replayModel.state, replayModel.effect, replayModel::handleUserIntent)
 
         } catch (e: IllegalStateException) {
             mCurrentView.value = { padding -> OnError(padding, e.message ?: "Unknown Error") }
             return
         }
 
-        listView.Draw(modifier = Modifier.padding(innerPadding))
+        NavHost(navController = mNavHostController, startDestination = Screen.List.route){
+            composable(Screen.List.route) {
+                listView.Draw(modifier = Modifier.padding(innerPadding))
+            }
+            composable(Screen.Replay.route) {
+                replayView.Draw(modifier = Modifier.padding(innerPadding))
+            }
+        }
     }
 
     @Composable

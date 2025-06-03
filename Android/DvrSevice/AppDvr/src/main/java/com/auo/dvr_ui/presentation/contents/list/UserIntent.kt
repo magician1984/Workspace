@@ -10,6 +10,6 @@ sealed class UserIntent : Presenter.IUserIntent{
     data object Lock : UserIntent()
     data object Unlock : UserIntent()
     data class DisplayTypeChanged(val type: UiState.DisplayType) : UserIntent()
-    data object SelectModeChanged : UserIntent()
+    data class SelectModeChanged(val selectMode: Boolean) : UserIntent()
     data object SelectAll : UserIntent()
 }
