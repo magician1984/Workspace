@@ -8,7 +8,8 @@ import com.auo.dvr_ui.entity.IUseCaseDeleteGroups
 import com.auo.dvr_ui.entity.IUseCaseGetDvrState
 import com.auo.dvr_ui.entity.IUseCaseGetRecordGroups
 import com.auo.dvr_ui.entity.IUseCaseLockGroups
-import com.auo.dvr_ui.entity.IUseCaseRegisterListener
+import com.auo.dvr_ui.entity.IUseCaseRegisterDvrStateUpdateListener
+import com.auo.dvr_ui.entity.IUseCaseRegisterRecordUpdateListener
 import com.auo.dvr_ui.entity.IUseCaseUnlockGroups
 import com.auo.dvr_ui.entity.IUseCaseUnmountStorage
 
@@ -23,17 +24,14 @@ class UseCaseGetListFiles(private val datasource: IDataSource) : IUseCaseGetReco
     }
 }
 
-class UseCaseRegisterListener(private val datasource: IDataSource) : IUseCaseRegisterListener {
-    override fun invoke(
-        onRecordGroupUpdate: () -> Unit,
-        onDvrStateUpdate: () -> Unit
-    ) {
-        datasource.registerUpdateListener(object : IDataSource.EventListener {
-            override fun onRecordUpdate() = onRecordGroupUpdate()
+class UseCaseRegisterRecordUpdateListener(private val datasource: IDataSource) : IUseCaseRegisterRecordUpdateListener {
+    override fun invoke(onUpdate: () -> Unit) = datasource.registerRecordUpdateListener(onUpdate)
+}
 
-            override fun onStateUpdate() = onDvrStateUpdate()
-        })
-    }
+class UseCaseRegisterDvrStateListener(private val datasource: IDataSource) :
+    IUseCaseRegisterDvrStateUpdateListener {
+    override fun invoke(onUpdate: () -> Unit) = datasource.registerDveStateUpdateListener(onUpdate)
+
 }
 
 class UseCaseLockGroup(private val datasource: IDataSource) : IUseCaseLockGroups {

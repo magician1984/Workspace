@@ -1,5 +1,6 @@
 package com.auo.dvr_ui.presentation
 
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
@@ -21,11 +22,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import com.auo.dvr_core.DvrState
 import com.auo.dvr_ui.entity.IUseCase
 import com.auo.dvr_ui.entity.IUseCaseDeleteGroups
+import com.auo.dvr_ui.entity.IUseCaseGetDvrState
 import com.auo.dvr_ui.entity.IUseCaseGetRecordGroups
 import com.auo.dvr_ui.entity.IUseCaseLockGroups
-import com.auo.dvr_ui.entity.IUseCaseRegisterListener
+import com.auo.dvr_ui.entity.IUseCaseRegisterDvrStateUpdateListener
+import com.auo.dvr_ui.entity.IUseCaseRegisterRecordUpdateListener
 import com.auo.dvr_ui.entity.IUseCaseUnlockGroups
 import com.auo.dvr_ui.ui.theme.DvrServiceTheme
 import com.auo.dvr_ui.usecase.IPresenter
@@ -77,11 +81,12 @@ class Presenter(
     override fun summitUseCases(vararg useCases: IUseCase) {
         mUseCaseList.clear()
         mUseCaseList.addAll(useCases)
-
-        mCurrentView.value = { innerPadding -> OnReady(innerPadding) }
+        findUseCase<IUseCaseRegisterDvrStateUpdateListener>().invoke(::onDvrStateUpdate)
     }
 
     override fun render() {
+        Log.d("Presenter", "render")
+        onDvrStateUpdate();
         renderer.setContent {
             DvrServiceTheme {
                 Scaffold { innerPadding ->
@@ -150,30 +155,44 @@ class Presenter(
     }
 
     private fun onDvrStateUpdate() {
+        val state = findUseCase<IUseCaseGetDvrState>().invoke()
 
+        Log.d("Presenter", "onDvrStateUpdate: $state")
+        if (state.isAvailable) {
+            mCurrentView.value = { innerPadding -> OnReady(innerPadding) }
+        } else {
+            if (state.errorType == DvrState.ErrorType.None) {
+                mCurrentView.value = { innerPadding -> OnLoading(innerPadding) }
+            } else {
+                mCurrentView.value =
+                    { innerPadding -> OnError(innerPadding, state.errorMessage ?: "Unknown") }
+            }
+        }
     }
 
     private inline fun <reified T : IModel<*, *, *>> getModel(): T {
-        return mModelList.find { it is T } as? T ?: run {
-            when (T::class) {
-                ListModel::class -> ListModel(
-                    onReplayRequest = {},
-                    scope = mBackgroundScope,
-                    getRecordGroups = { findUseCase<IUseCaseGetRecordGroups>().invoke(set = it) },
-                    registerListener = {
-                        findUseCase<IUseCaseRegisterListener>().invoke(
-                            it,
-                            ::onDvrStateUpdate
-                        )
-                    },
-                    lockGroups = { findUseCase<IUseCaseLockGroups>().invoke(it) },
-                    unlockGroups = { findUseCase<IUseCaseUnlockGroups>().invoke(it) },
-                    deleteGroups = { findUseCase<IUseCaseDeleteGroups>().invoke(it) }
-                ) as T
+        return mModelList.find { it is T } as? T
+            ?: run {
+                val model = when (T::class) {
+                    ListModel::class -> ListModel(
+                        onReplayRequest = {},
+                        scope = mBackgroundScope,
+                        getRecordGroups = { findUseCase<IUseCaseGetRecordGroups>().invoke(set = it) },
+                        registerListener = {
+                            findUseCase<IUseCaseRegisterRecordUpdateListener>().invoke(
+                                it
+                            )
+                        },
+                        lockGroups = { findUseCase<IUseCaseLockGroups>().invoke(it) },
+                        unlockGroups = { findUseCase<IUseCaseUnlockGroups>().invoke(it) },
+                        deleteGroups = { findUseCase<IUseCaseDeleteGroups>().invoke(it) }
+                    ) as T
 
-                else -> error("Model not found: ${T::class.java.name}")
+                    else -> error("Model not found: ${T::class.java.name}")
+                }
+                mModelList.add(model)
+                return@run model
             }
-        }
     }
 
     private inline fun <reified T : IUseCase> findUseCase(): T {

@@ -9,8 +9,12 @@ interface IUseCaseGetRecordGroups : IUseCase{
     operator fun invoke(set: Set<RecordType>) : List<RecordGroup>
 }
 
-interface IUseCaseRegisterListener : IUseCase{
-    operator fun invoke(onRecordGroupUpdate : () -> Unit, onDvrStateUpdate : () -> Unit)
+interface IUseCaseRegisterRecordUpdateListener : IUseCase{
+    operator fun invoke(onUpdate : () -> Unit)
+}
+
+interface IUseCaseRegisterDvrStateUpdateListener : IUseCase{
+    operator fun invoke(onUpdate : () -> Unit)
 }
 
 interface IUseCaseLockGroups : IUseCase{

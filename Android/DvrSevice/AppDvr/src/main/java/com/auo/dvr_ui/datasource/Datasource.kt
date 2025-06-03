@@ -1,6 +1,13 @@
 package com.auo.dvr_ui.datasource
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
 import android.util.Log
+import androidx.activity.ComponentActivity.BIND_AUTO_CREATE
+import com.auo.dvr.DvrService
 import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrState
 import com.auo.dvr_core.IDvrEventCallback
@@ -11,14 +18,16 @@ import com.auo.dvr_core.RecordResolution
 import com.auo.dvr_ui.entity.DvrStateData
 import com.auo.dvr_ui.usecase.IDataSource
 
-class Datasource(
-    private val service: IDvrService
-) : IDataSource {
-    private var mListeners: MutableList<IDataSource.EventListener> = mutableListOf()
+class Datasource(context: Context) : IDataSource {
+    private val mRecordUpdateListeners: MutableList<IDataSource.RecordUpdateListener> = mutableListOf()
+
+    private val mDvrStateUpdateListeners: MutableList<IDataSource.DveStateUpdateListener> = mutableListOf()
 
     private var _dvrState: DvrStateData = DvrStateData(DvrState(false, DvrState.ErrorType.None))
 
     private val _recordGroups: MutableList<RecordGroup> = mutableListOf()
+
+    private var mService: IDvrService? = null
 
     override val dvrState: DvrStateData
         get() = _dvrState
@@ -34,47 +43,40 @@ class Datasource(
         errorMessages[DvrState.ErrorType.InternalError] = "Internal error"
         errorMessages[DvrState.ErrorType.InRestart] = "In restarting"
 
-        service.registerCallback(object : IDvrEventCallback.Stub() {
-            override fun onRecordUpdate(groups: List<RecordGroup>) = updateRecordGroups(groups)
-
-            override fun onStateUpdate(state: DvrState) = updateDvrState(state)
-
-            //Nothing need to do
-            override fun onConfigureUpdate(configure: DvrConfigure?) {
-            }
-        })
-
-        updateDvrState(service.state)
-
-        updateRecordGroups(service.recordGoups)
+        // Bind service
+        bindService(context)
     }
 
-    override fun registerUpdateListener(listener: IDataSource.EventListener) {
-        mListeners.add(listener)
+    override fun registerRecordUpdateListener(listener: IDataSource.RecordUpdateListener) {
+        mRecordUpdateListeners.add(listener)
+    }
+
+    override fun registerDveStateUpdateListener(listener: IDataSource.DveStateUpdateListener) {
+        mDvrStateUpdateListeners.add(listener)
     }
 
     override fun lockRecords(record: List<RecordGroup>) = withServiceAvailable(onAvailable = {
-        service.lockFile(record)
+        service ->  service.lockFile(record)
     }, onUnavailable = {
     })
 
     override fun unlockRecords(record: List<RecordGroup>) = withServiceAvailable(onAvailable = {
-        service.unlockFile(record)
+        service ->  service.unlockFile(record)
     }, onUnavailable = {
     })
 
     override fun deleteRecords(record: List<RecordGroup>) = withServiceAvailable(onAvailable = {
-        service.deleteFile(record)
+        service ->  service.deleteFile(record)
     }, onUnavailable = {
     })
 
     override fun unmountStorage(): Unit = withServiceAvailable(onAvailable = {
-        service.unmountFlash()
+        service ->  service.unmountFlash()
     }, onUnavailable = {})
 
     override fun getConfigure(): DvrConfigure = withServiceAvailable(
         onAvailable = {
-            service.configure!!
+            service ->  service.configure!!
         },
         onUnavailable = {
             DvrConfigure(
@@ -84,16 +86,53 @@ class Datasource(
         })
 
     private fun updateDvrState(state: DvrState) {
+        Log.d("Datasource", "updateDvrState: $state")
+
         val message: String = errorMessages.getOrDefault(state.errorType, "")
 
         _dvrState = DvrStateData(state, message)
-        mListeners.forEach { it.onStateUpdate() }
+        mDvrStateUpdateListeners.forEach{it.onUpdate()}
     }
 
     private fun updateRecordGroups(groups: List<RecordGroup>) {
         _recordGroups.clear()
         _recordGroups.addAll(groups)
-        mListeners.forEach { it.onRecordUpdate() }
+        mRecordUpdateListeners.forEach { it.onUpdate() }
+    }
+
+    private fun bindService(context: Context) {
+        val intent = Intent(context, DvrService::class.java)
+        context.bindService(intent, object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                service?.let {
+                    Log.d("Datasource", "onServiceConnected")
+                    initService(IDvrService.Stub.asInterface(it))
+                }
+            }
+
+            override fun onServiceDisconnected(name: ComponentName?) {
+                TODO("Not yet implemented")
+            }
+        }, BIND_AUTO_CREATE)
+    }
+
+    private fun initService(service: IDvrService){
+        mService = service.also {
+            Log.d("DataSource", "Register callback")
+            it.registerCallback(object : IDvrEventCallback.Stub() {
+                override fun onRecordUpdate(groups: List<RecordGroup>) = updateRecordGroups(groups)
+
+                override fun onStateUpdate(state: DvrState) = updateDvrState(state)
+
+                //Nothing need to do
+                override fun onConfigureUpdate(configure: DvrConfigure?) {
+                }
+            })
+
+            Log.d("DataSource", "Get state")
+            updateDvrState(it.state)
+            updateRecordGroups(it.recordGoups)
+        }
     }
 
     private inline fun <R> withServiceAvailable(
@@ -101,8 +140,8 @@ class Datasource(
         onUnavailable: () -> R
     ): R {
         Log.d("Datasource", "withServiceAvailable : ${dvrState.isAvailable}")
-        return if (dvrState.isAvailable)
-            onAvailable(service)
+        return if (dvrState.isAvailable && mService != null)
+            onAvailable(mService!!)
         else
             onUnavailable()
     }
