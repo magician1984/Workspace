@@ -68,7 +68,8 @@ class Presenter(
     internal interface IEffect
 
     internal abstract class IModel<S : IUiState, I : IUserIntent, E : IEffect>(
-        private val scope: CoroutineScope
+        protected val scope: CoroutineScope,
+        protected val navController: NavHostController
     ) {
         abstract val state: StateFlow<S>
         abstract val effect: StateFlow<E?>
@@ -205,8 +206,8 @@ class Presenter(
             ?: run {
                 val model = when (T::class) {
                     ListModel::class -> ListModel(
-                        onReplayRequest = {},
                         scope = mBackgroundScope,
+                        navController = mNavHostController,
                         getRecordGroups = { findUseCase<IUseCaseGetRecordGroups>().invoke(set = it) },
                         registerListener = {
                             findUseCase<IUseCaseRegisterRecordUpdateListener>().invoke(

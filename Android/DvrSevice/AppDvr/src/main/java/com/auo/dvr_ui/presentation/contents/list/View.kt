@@ -21,7 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.auo.dvr_ui.R
 import com.auo.dvr_ui.presentation.Presenter
 import com.auo.dvr_ui.presentation.contents.list.component.ControlComponent

@@ -9,4 +9,5 @@ sealed class UserIntent : Presenter.IUserIntent{
     data object Pause : UserIntent()
     data object Stop : UserIntent()
     data class SeekTo(val time : Long) : UserIntent()
+    data object Init : UserIntent()
 }

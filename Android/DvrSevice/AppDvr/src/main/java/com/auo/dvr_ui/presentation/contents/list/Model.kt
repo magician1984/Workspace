@@ -1,6 +1,7 @@
 package com.auo.dvr_ui.presentation.contents.list
 
 import android.util.Log
+import androidx.navigation.NavHostController
 import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_core.RecordType
 import com.auo.dvr_ui.presentation.Presenter
@@ -10,14 +11,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 internal class Model(
-    private val onReplayRequest: (RecordGroup) -> Unit,
-    val scope: CoroutineScope,
+    scope: CoroutineScope,
+    navController: NavHostController,
     private val getRecordGroups: (Set<RecordType>) -> List<RecordGroup>,
     private val registerListener: (onRecordGroupUpdate: () -> Unit) -> Unit,
     private val lockGroups: (List<RecordGroup>) -> Unit,
     private val unlockGroups: (List<RecordGroup>) -> Unit,
     private val deleteGroups: (List<RecordGroup>) -> Unit,
-) : Presenter.IModel<UiState, UserIntent, Effect>(scope) {
+) : Presenter.IModel<UiState, UserIntent, Effect>(scope, navController) {
 
     private val _state : MutableStateFlow<UiState> = MutableStateFlow(
         UiState(
@@ -89,7 +90,8 @@ internal class Model(
             }
             _state.value = _state.value.copy(selectedGroups = selected)
         }else{
-            onReplayRequest(item)
+            navController.currentBackStackEntry?.savedStateHandle?.set("record", item)
+            navController.navigate(Presenter.Screen.Replay.route)
         }
     }
 }
