@@ -55,6 +55,11 @@ internal class Model(
                     registerListener(::updateGroups)
                     updateGroups()
                 }
+
+                UserIntent.SelectAll -> {
+                    val groups  = _state.value.groupList
+                    _state.value = _state.value.copy(selectedGroups = groups)
+                }
             }
         }
     }

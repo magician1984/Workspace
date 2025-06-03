@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -77,15 +79,22 @@ internal class View(
         }
 
         Column(modifier = modifier) {
-            TabLayer(
-                modifier = Modifier
-                    .fillMaxWidth(0.5f)
-                    .align(Alignment.CenterHorizontally),
-                indicatorColor = highlightColor,
-                mState.displayType
-            ) {
-                intentHandler(UserIntent.DisplayTypeChanged(it))
+            Box(modifier = Modifier.fillMaxWidth().wrapContentHeight()){
+                TabLayer(
+                    modifier = Modifier
+                        .fillMaxWidth(0.5f)
+                        .align(Alignment.Center),
+                    indicatorColor = highlightColor,
+                    mState.displayType
+                ) {
+                    intentHandler(UserIntent.DisplayTypeChanged(it))
+                }
+
+                SelectAllButtonLayer(modifier = Modifier.wrapContentWidth().align(Alignment.CenterEnd), mState.selectMode) {
+                    intentHandler(UserIntent.SelectAll)
+                }
             }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth(1f)
@@ -128,7 +137,7 @@ internal class View(
             buildList { UiState.DisplayType.entries.forEach { type -> add(type.name) } }
         }
 
-        val selectedIndex by remember {
+        val selectedIndex by remember(displayType) {
             mutableIntStateOf(displayType.code)
         }
 
@@ -251,6 +260,26 @@ internal class View(
     }
 
     @Composable
+    private fun SelectAllButtonLayer(modifier: Modifier, selectMode: Boolean, onClick : () -> Unit){
+        Box(modifier = modifier){
+            if(selectMode){
+                OutlinedButton(
+                    modifier = Modifier.align(Alignment.Center),
+                    onClick = onClick,
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color.Transparent,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(text = "SelectAll", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+        }
+    }
+
+    @Composable
     private fun Item(
         modifier: Modifier,
         highlightColor: Color,
@@ -273,4 +302,5 @@ internal class View(
             Text(text = dateFormat.format(Date(item.timestamp)))
         }
     }
+
 }
