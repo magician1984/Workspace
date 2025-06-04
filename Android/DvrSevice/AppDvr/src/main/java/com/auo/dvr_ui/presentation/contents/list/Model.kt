@@ -6,6 +6,7 @@ import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_core.RecordType
 import com.auo.dvr_ui.presentation.Presenter
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -66,7 +67,7 @@ internal class Model(
 
     private fun updateGroups(){
         val filter = when(_state.value.displayType){
-            UiState.DisplayType.Normal -> setOf(RecordType.Normal, RecordType.Locked)
+            UiState.DisplayType.Normal -> setOf(RecordType.Normal)
             UiState.DisplayType.Incident -> setOf(RecordType.Protected)
             UiState.DisplayType.Locked -> setOf(RecordType.Locked)
         }
@@ -90,8 +91,11 @@ internal class Model(
             }
             _state.value = _state.value.copy(selectedGroups = selected)
         }else{
-            navController.currentBackStackEntry?.savedStateHandle?.set("record", item)
-            navController.navigate(Presenter.Screen.Replay.route)
+            scope.launch(Dispatchers.Main){
+                navController.currentBackStackEntry?.savedStateHandle?.set("record", item)
+                navController.currentBackStackEntry?.savedStateHandle?.set("list", _state.value.groupList.toTypedArray())
+                navController.navigate(Presenter.Screen.Replay.route)
+            }
         }
     }
 }

@@ -1,13 +1,18 @@
 package com.auo.dvr_ui.presentation.contents.replay.component
 
+import android.content.Context
+import android.graphics.SurfaceTexture
+import android.net.Uri
 import android.view.SurfaceHolder
-import android.view.SurfaceView
+import android.view.TextureView
+import android.view.TextureView.SurfaceTextureListener
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,20 +35,40 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.auo.dvr_core.CamLocation
+import com.auo.dvr_core.RecordFile
 import com.auo.dvr_ui.R
 import com.auo.dvr_ui.presentation.contents.CommonComponents
+import com.auo.dvr_ui.presentation.contents.replay.UiState
 import com.auo.dvr_ui.ui.theme.DvrServiceTheme
 
 object DisplayComponent {
+
+
+    data class ControlLayerConfig(
+        val progressHigh: Dp,
+        val progressBackgroundColor: Color,
+        val progressTrackColor : Color,
+        val mediaBtnSpace: Dp,
+        val btnLayerPadding : PaddingValues
+    )
+
     @Composable
     fun DisplayLayer(
         modifier: Modifier,
+        state: UiState,
         onReady: (List<Pair<CamLocation, SurfaceHolder>>) -> Unit
     ) {
         val camLocations = remember {
@@ -52,11 +78,19 @@ object DisplayComponent {
             )
         }
 
+        val mIsPlaying by remember(state) {
+            mutableStateOf(state.isPlaying)
+        }
+
+        val mRecordGroup by remember(state) {
+            mutableStateOf(state.recordGroup)
+        }
+
         val holdersMap = remember { mutableStateMapOf<CamLocation, SurfaceHolder>() }
-        var selected by remember { mutableStateOf<CamLocation?>(null) }
+        var selected by remember(state) { mutableStateOf(state.focusLocation) }
 
         LaunchedEffect(holdersMap) {
-            if(holdersMap.size == camLocations.size){
+            if (holdersMap.size == camLocations.size) {
                 val list = buildList<Pair<CamLocation, SurfaceHolder>> {
                     holdersMap.entries.forEach { entry ->
                         this.add(entry.toPair())
@@ -99,7 +133,7 @@ object DisplayComponent {
                         .zIndex(0f)
                         .alpha(0f) // hide but retain
                 }
-
+                val record: RecordFile? = mRecordGroup?.files?.find { it.location == cam }
                 DisplayView(
                     modifier = itemModifier
                         .animateContentSize()
@@ -107,10 +141,12 @@ object DisplayComponent {
                             selected = if (selected == cam) null else cam
                         },
                     camLocation = cam,
-                    isVisible = visible,
-                    onReady = { loc, holder ->
-                        holdersMap[loc] = holder
-                    }
+                    isFocus = visible,
+                    isPlaying = mIsPlaying,
+                    playItem = record?.uri,
+                    thumbnail = record?.thumbnail,
+                    onReady = {},
+                    onSelect = {}
                 )
             }
         }
@@ -119,68 +155,59 @@ object DisplayComponent {
     @Composable
     fun ControlLayer(
         modifier: Modifier,
-        sharedData: SharedData,
-        backgroundColor: Color,
-        highlightColor: Color,
+        isPlaying: Boolean,
+        time: Long,
+        config : ControlLayerConfig,
         onPlayStateSwitch: () -> Unit,
         onPrevious: () -> Unit,
         onNext: () -> Unit,
         onBack: () -> Unit,
     ) {
-        val mProgress by remember(sharedData.time) {
-            mutableFloatStateOf(sharedData.time.toFloat() / 60000.toFloat())
+        val mProgress by remember(time) {
+            mutableFloatStateOf(time.toFloat() / 60000.toFloat())
         }
         Column(modifier = modifier) {
             ProgressBar(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp),
-                backgroundColor = backgroundColor,
-                progressColor = highlightColor,
+                    .height(config.progressHigh),
+                backgroundColor = config.progressBackgroundColor,
+                progressColor = config.progressTrackColor,
                 progress = mProgress
             )
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .padding(8.dp)
+                    .padding(config.btnLayerPadding)
             ) {
-                CommonComponents.CircleButton(
+                CommonComponents.VectorButton(
                     modifier = Modifier
-                        .fillMaxHeight()
                         .align(Alignment.CenterStart),
-                    iconRes = R.drawable.icon_back,
-                    backgroundColor = Color.Transparent,
-                    tintColor = Color.White,
+                    iconRes = R.drawable.btn_back,
+                    touchedRes = R.drawable.btn_back_pressed,
                     onClick = onBack
                 )
 
                 Row(
                     modifier = Modifier
-                        .fillMaxHeight()
                         .align(Alignment.Center),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(config.mediaBtnSpace),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CommonComponents.CircleButton(
+                    CommonComponents.VectorButton(
                         modifier = Modifier,
-                        iconRes = R.drawable.icon_prev,
-                        backgroundColor = Color.Transparent,
-                        tintColor = Color.White,
+                        iconRes = R.drawable.btn_media_prev,
                         onClick = onPrevious
                     )
-                    CommonComponents.CircleButton(
+                    CommonComponents.VectorButton(
                         modifier = Modifier,
-                        iconRes = R.drawable.icon_pause,
-                        backgroundColor = Color.Gray,
-                        tintColor = highlightColor,
+                        iconRes = if (isPlaying) R.drawable.btn_pause else R.drawable.btn_play,
                         onClick = onPlayStateSwitch
                     )
-                    CommonComponents.CircleButton(
+                    CommonComponents.VectorButton(
                         modifier = Modifier,
-                        iconRes = R.drawable.icon_next,
-                        backgroundColor = Color.Transparent,
-                        tintColor = Color.White,
+                        iconRes = R.drawable.btn_media_next,
                         onClick = onNext
                     )
                 }
@@ -192,26 +219,117 @@ object DisplayComponent {
     private fun DisplayView(
         modifier: Modifier,
         camLocation: CamLocation,
-        isVisible: Boolean,
-        onReady: (CamLocation, SurfaceHolder) -> Unit
+        isPlaying: Boolean,
+        isFocus: Boolean,
+        thumbnail: Uri?,
+        playItem: Uri? = null,
+        onReady: (CamLocation) -> Unit,
+        onSelect: (CamLocation) -> Unit
     ) {
-        AndroidView(
-            modifier = modifier.then(if (isVisible) Modifier else Modifier.alpha(0f)),
-            factory = { context ->
-                SurfaceView(context).apply {
-                    holder.addCallback(object : SurfaceHolder.Callback {
-                        override fun surfaceCreated(p0: SurfaceHolder) {
-                            onReady(camLocation, p0)
-                        }
 
-                        override fun surfaceChanged(p0: SurfaceHolder, p1: Int, p2: Int, p3: Int) {
-                        }
+        val mContext: Context = LocalContext.current
 
-                        override fun surfaceDestroyed(p0: SurfaceHolder) {
-                        }
-                    })
+        val mPlayer: ExoPlayer = remember {
+            ExoPlayer.Builder(mContext).build()
+        }
+
+        var mShowThumbnail by remember {
+            mutableStateOf(true)
+        }
+
+        LaunchedEffect(mPlayer.playbackState) {
+            mShowThumbnail = if (mPlayer.playbackState != ExoPlayer.STATE_READY)
+                true
+            else
+                false
+        }
+
+        LaunchedEffect(playItem) {
+            if (playItem != null) {
+                if (mPlayer.mediaItemCount > 0) {
+                    mPlayer.stop()
+                    mPlayer.clearMediaItems()
                 }
-            })
+
+                val mediaItem: MediaItem = MediaItem.fromUri(playItem)
+                mPlayer.setMediaItem(mediaItem)
+                mPlayer.prepare()
+                onReady(camLocation)
+            }
+        }
+
+        LaunchedEffect(isPlaying) {
+            if (mPlayer.playbackState == ExoPlayer.STATE_IDLE)
+                return@LaunchedEffect
+            if (isPlaying)
+                mPlayer.play()
+            else
+                mPlayer.pause()
+        }
+
+        Box(modifier = modifier.then(if (isFocus) Modifier else Modifier.alpha(0f))) {
+
+            CommonComponents.RoundedButton(
+                modifier = Modifier
+                    .size(229.dp, 80.dp)
+                    .align(Alignment.TopStart)
+                    .offset(46.dp, 33.dp),
+                label = camLocation.name,
+                borderColor = Color.Transparent,
+                borderWidth = 0.dp,
+                textSize = 35.sp,
+                backgroundColor = Color.Gray,
+                textColor = Color.Black,
+                onClick = { onSelect(camLocation) }
+            )
+
+            if (mShowThumbnail) {
+                val model = ImageRequest.Builder(LocalContext.current)
+                    .data(thumbnail)
+                    .build()
+
+                AsyncImage(
+                    model = model,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(0.5f),
+                    contentDescription = null,
+                )
+
+            }
+
+            AndroidView(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(0f), factory = { context ->
+                    TextureView(context).apply {
+                        surfaceTextureListener = object : SurfaceTextureListener {
+                            override fun onSurfaceTextureAvailable(
+                                p0: SurfaceTexture,
+                                p1: Int,
+                                p2: Int
+                            ) {
+                                mPlayer.setVideoTextureView(this@apply)
+                            }
+
+                            override fun onSurfaceTextureSizeChanged(
+                                p0: SurfaceTexture,
+                                p1: Int,
+                                p2: Int
+                            ) {
+                            }
+
+                            override fun onSurfaceTextureDestroyed(p0: SurfaceTexture): Boolean {
+                                mPlayer.clearVideoTextureView(this@apply)
+                                return true
+                            }
+
+                            override fun onSurfaceTextureUpdated(p0: SurfaceTexture) {
+                            }
+                        }
+                    }
+                })
+        }
     }
 
     @Composable
@@ -230,17 +348,22 @@ object DisplayComponent {
     }
 }
 
-@Preview
+@Preview(widthDp = 1920, heightDp = 973)
 @Composable
 private fun ControlLayerPreview() {
     DvrServiceTheme {
         DisplayComponent.ControlLayer(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp),
-            sharedData = SharedData(playState = SharedData.PlayState.Idle, time = 30000),
-            backgroundColor = Color.Gray,
-            highlightColor = MaterialTheme.colorScheme.primary,
+                .fillMaxWidth(),
+            isPlaying = false,
+            time = 0L,
+            config = DisplayComponent.ControlLayerConfig(
+                progressHigh = 8.dp,
+                progressBackgroundColor = Color.Gray,
+                progressTrackColor = Color.White,
+                mediaBtnSpace = 88.dp,
+                btnLayerPadding = PaddingValues(start = 46.dp, top = 30.dp, bottom = 26.dp)
+            ),
             onPlayStateSwitch = {},
             onPrevious = {},
             onNext = {},

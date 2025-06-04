@@ -1,5 +1,6 @@
 package com.auo.dvr_ui.presentation.contents.replay
 
+import android.view.SurfaceHolder
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_ui.presentation.Presenter
 
@@ -9,5 +10,7 @@ sealed class UserIntent : Presenter.IUserIntent{
     data object Pause : UserIntent()
     data object Stop : UserIntent()
     data class SeekTo(val time : Long) : UserIntent()
-    data object Init : UserIntent()
+    data class SurfaceReady(val list : List<Pair<CamLocation, SurfaceHolder>>) : UserIntent()
+    data object Back : UserIntent()
+
 }

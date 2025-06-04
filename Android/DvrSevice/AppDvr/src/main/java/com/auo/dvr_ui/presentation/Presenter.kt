@@ -1,6 +1,5 @@
 package com.auo.dvr_ui.presentation
 
-import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,14 +22,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
-import androidx.navigation.NavOptions
-import androidx.navigation.Navigator
+import androidx.navigation.compose.ComposeNavigator
+import androidx.navigation.compose.DialogNavigator
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.savedstate.SavedState
 import com.auo.dvr_core.DvrState
 import com.auo.dvr_ui.entity.IUseCase
 import com.auo.dvr_ui.entity.IUseCaseDeleteGroups
@@ -95,7 +92,10 @@ class Presenter(
     private val mCurrentView: MutableState<ViewContent> =
         mutableStateOf({ innerPadding -> OnLoading(innerPadding) })
 
-    private val mNavHostController : NavHostController = NavHostController(renderer)
+    private val mNavHostController : NavHostController = NavHostController(renderer).apply {
+        navigatorProvider.addNavigator(ComposeNavigator())
+        navigatorProvider.addNavigator(DialogNavigator())
+    }
 
     override fun summitUseCases(vararg useCases: IUseCase) {
         mUseCaseList.clear()
@@ -131,6 +131,8 @@ class Presenter(
             mCurrentView.value = { padding -> OnError(padding, e.message ?: "Unknown Error") }
             return
         }
+
+        val mNavController = rememberNavController()
 
         NavHost(navController = mNavHostController, startDestination = Screen.List.route){
             composable(Screen.List.route) {
@@ -218,7 +220,10 @@ class Presenter(
                         unlockGroups = { findUseCase<IUseCaseUnlockGroups>().invoke(it) },
                         deleteGroups = { findUseCase<IUseCaseDeleteGroups>().invoke(it) }
                     ) as T
-
+                    ReplayModel::class -> ReplayModel(
+                        scope = mBackgroundScope,
+                        navController = mNavHostController
+                    ) as T
                     else -> error("Model not found: ${T::class.java.name}")
                 }
                 mModelList.add(model)

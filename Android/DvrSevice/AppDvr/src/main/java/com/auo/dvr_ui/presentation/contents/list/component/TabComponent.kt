@@ -9,12 +9,14 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.TextUnit
 import com.auo.dvr_ui.presentation.contents.list.UiState
 
 data object TabComponent {
     @Composable
     fun TabLayer(
         modifier: Modifier,
+        labelSize : TextUnit,
         indicatorColor: Color,
         displayType: UiState.DisplayType,
         onDisplayTypeChanged: (UiState.DisplayType) -> Unit
@@ -37,7 +39,7 @@ data object TabComponent {
                         if (!isSelected)
                             onDisplayTypeChanged(UiState.DisplayType.entries[index])
                     },
-                    text = { Text(text = label) },
+                    text = { Text(text = label, fontSize = labelSize) },
                     selectedContentColor = indicatorColor,
                     unselectedContentColor = Color.White
                 )

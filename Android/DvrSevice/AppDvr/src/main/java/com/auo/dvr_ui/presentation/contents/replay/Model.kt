@@ -1,39 +1,72 @@
 package com.auo.dvr_ui.presentation.contents.replay
 
+import androidx.compose.runtime.mutableStateOf
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavHostController
+import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.RecordGroup
-import com.auo.dvr_ui.entity.IUseCaseGetRecordGroups
 import com.auo.dvr_ui.presentation.Presenter
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 internal class Model(
     scope: CoroutineScope,
-    navController: NavHostController,
-    private val useCaseGetRecordGroups: IUseCaseGetRecordGroups
+    navController: NavHostController
 ) : Presenter.IModel<UiState, UserIntent, Effect>(scope, navController) {
+    private val _state : MutableStateFlow<UiState> = MutableStateFlow(UiState(
+        focusLocation = null,
+        isPlaying = false,
+        recordGroup = null
+    ))
+
+    private val _effect : MutableStateFlow<Effect?> = MutableStateFlow(null)
+
     override val state: StateFlow<UiState>
-        get() = TODO("Not yet implemented")
+        get() = _state
+
     override val effect: StateFlow<Effect?>
-        get() = TODO("Not yet implemented")
+        get() = _effect
+
+    private var mCurrentRecordGroup : RecordGroup? = null
+
+    private val mRecordGroups : MutableList<RecordGroup> = mutableListOf()
 
     override fun handleUserIntent(intent: UserIntent) {
         scope.launch {
             when(intent){
-                UserIntent.Init -> onInit()
+                is UserIntent.SurfaceReady -> onSurfaceReady()
                 UserIntent.Pause -> TODO()
                 is UserIntent.SeekTo -> TODO()
                 is UserIntent.SelectCamera -> TODO()
                 UserIntent.Start -> TODO()
                 UserIntent.Stop -> TODO()
+                UserIntent.Back -> onBack()
             }
         }
     }
 
-    private fun onInit(){
-        val recordGroups : RecordGroup = navController.previousBackStackEntry?.savedStateHandle?.get<RecordGroup>("record") ?: return
+    private fun onSurfaceReady(){
+        readData()
 
 
+    }
+
+    private fun readData(){
+        mCurrentRecordGroup = navController.previousBackStackEntry?.savedStateHandle?.get<RecordGroup>("record")
+
+        val list = navController.previousBackStackEntry?.savedStateHandle?.get<Array<RecordGroup>>("list")
+
+        mRecordGroups.clear()
+
+        mRecordGroups.addAll(list?.toList() ?: emptyList())
+    }
+
+    private fun onBack(){
+        scope.launch(Dispatchers.Main) {
+            navController.navigate(Presenter.Screen.List.route)
+        }
     }
 }
