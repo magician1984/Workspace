@@ -177,6 +177,13 @@ internal class View(
                 trackHeight = 80.dp
             )
         }
+
+        EffectHandler(modifier = Modifier.fillMaxSize(),effect = mEffect)
+    }
+
+    @Composable
+    private fun EffectHandler(modifier: Modifier, effect: Effect?){
+
     }
 
     @Composable

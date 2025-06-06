@@ -7,5 +7,6 @@ import com.auo.dvr_ui.presentation.Presenter
 data class UiState(
     val isPlaying: Boolean,
     val showThumbnail: Boolean,
-    val thumbnails : Map<CamLocation, Uri>
+    val thumbnails : Map<CamLocation, Uri>,
+    val progress : Float
 ) : Presenter.IUiState

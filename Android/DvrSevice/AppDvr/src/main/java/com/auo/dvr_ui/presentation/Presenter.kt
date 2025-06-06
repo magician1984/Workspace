@@ -245,6 +245,15 @@ class Presenter(
                                     videoController.prepare(file.location, file.uri)
                                 }
                             }
+                        },
+                        registerPlayStateUpdate = {
+                            videoController.addOnPlayStateUpdateListener(it)
+                        },
+                        registerPositionUpdate = {
+                            videoController.addOnPositionUpdateListener(it)
+                        },
+                        registerOnVideoReady = {
+                            videoController.addOnReadyListener(it)
                         }
                     ) as T
 

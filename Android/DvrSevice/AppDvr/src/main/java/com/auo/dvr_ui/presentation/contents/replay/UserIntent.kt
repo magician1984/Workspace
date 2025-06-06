@@ -6,7 +6,6 @@ import com.auo.dvr_core.CamLocation
 import com.auo.dvr_ui.presentation.Presenter
 
 sealed class UserIntent : Presenter.IUserIntent{
-    data class SelectCamera(val location : CamLocation) : UserIntent()
     data object PlayStateSwitch : UserIntent()
     data object Previous : UserIntent()
     data object Next : UserIntent()

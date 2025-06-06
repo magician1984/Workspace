@@ -30,19 +30,17 @@ class ExoVideoPlayer<T : Any>(
     companion object {
         private val allocator: DefaultAllocator =
             DefaultAllocator(false, C.DEFAULT_BUFFER_SEGMENT_SIZE)
-
-
     }
 
     private val loadControl: DefaultLoadControl =
         DefaultLoadControl.Builder()
             .setAllocator(allocator)
-            .setBufferDurationsMs(3000, 3000, 1000, 3000)
+            .setBufferDurationsMs(3000, 6000, 500, 1000)
             .setPrioritizeTimeOverSizeThresholds(false)
             .setTargetBufferBytes(C.LENGTH_UNSET)
             .build()
 
-    private val mExoPlayer: ExoPlayer =
+    val mExoPlayer: ExoPlayer =
         ExoPlayer.Builder(mContext)
             .setLooper(looper)
             .setPlaybackLooper(playbackLooper)
@@ -54,22 +52,7 @@ class ExoVideoPlayer<T : Any>(
     init {
 
         mExoPlayer.addListener(object : Player.Listener {
-            override fun onPlaybackStateChanged(state: Int) {
-                when (state) {
-                    Player.STATE_BUFFERING -> Log.d("Exo", "Buffering")
-                    Player.STATE_READY -> Log.d("Exo", "Ready to play")
-                    Player.STATE_ENDED -> Log.d("Exo", "Ended")
-                    Player.STATE_IDLE -> Log.d("Exo", "Idle")
-                }
-            }
 
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                Log.d("Exo", "Playing: $isPlaying")
-            }
-
-            override fun onPlayerError(error: PlaybackException) {
-                Log.e("Exo", "Error: ${error.message}")
-            }
         })
     }
 
@@ -84,6 +67,8 @@ class ExoVideoPlayer<T : Any>(
 
     @OptIn(UnstableApi::class)
     override fun prepare(uri: Uri) {
+        stop()
+
         val mediaItem = MediaItem.fromUri(uri)
         val dataSourceFactory = DefaultDataSource.Factory(mContext)
         val mediaSource =
@@ -103,10 +88,17 @@ class ExoVideoPlayer<T : Any>(
 
     override fun stop() {
         mExoPlayer.stop()
+        mExoPlayer.clearMediaItems()
     }
 
     override fun release() {
         mExoPlayer.release()
+    }
+
+    override fun reset() {
+        mExoPlayer.stop()
+        mExoPlayer.seekTo(0)
+        mExoPlayer.prepare()
     }
 
     override val isPlaying: Boolean

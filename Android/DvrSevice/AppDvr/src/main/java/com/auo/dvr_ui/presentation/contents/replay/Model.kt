@@ -6,6 +6,7 @@ import android.view.TextureView
 import androidx.navigation.NavHostController
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.RecordGroup
+import com.auo.dvr_ui.framework.ISyncVideoController
 import com.auo.dvr_ui.presentation.Presenter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,12 +22,16 @@ internal class Model(
     private val onPlayRequest : () -> Unit,
     private val onPauseRequest : () -> Unit,
     private val onNextRequest : () -> Unit,
-    private val onPrevRequest : () -> Unit
+    private val onPrevRequest : () -> Unit,
+    registerPlayStateUpdate: ((isPlaying : Boolean)->Unit) -> Unit,
+    registerPositionUpdate: ((position : Long, duration : Long)->Unit) -> Unit,
+    registerOnVideoReady: (()->Unit) -> Unit
 ) : Presenter.IModel<UiState, UserIntent, Effect>(scope, navController) {
     private val _state : MutableStateFlow<UiState> = MutableStateFlow(UiState(
         isPlaying = false,
         thumbnails = emptyMap(),
-        showThumbnail = false
+        showThumbnail = false,
+        progress = 0f
     ))
 
     private val _effect : MutableStateFlow<Effect?> = MutableStateFlow(null)
@@ -41,14 +46,19 @@ internal class Model(
 
     private val mRecordGroups : MutableList<RecordGroup> = mutableListOf()
 
+    init {
+        registerPositionUpdate(::onTimeUpdate)
+        registerPlayStateUpdate(::onPlayStateUpdate)
+        registerOnVideoReady(::onVideoReady)
+    }
+
     override fun handleUserIntent(intent: UserIntent) {
         scope.launch {
             when(intent){
                 is UserIntent.SurfaceReady -> onSurfaceReady(intent.list)
                 is UserIntent.SeekTo -> TODO()
-                is UserIntent.SelectCamera -> TODO()
                 UserIntent.Back -> onBack()
-                UserIntent.Next -> TODO()
+                UserIntent.Next -> onNextRequest()
                 UserIntent.PlayStateSwitch ->{
                     if(_state.value.isPlaying){
                         onPauseRequest()
@@ -58,28 +68,19 @@ internal class Model(
                         _state.value = _state.value.copy(isPlaying = true, showThumbnail = false)
                     }
                 }
-                UserIntent.Previous -> TODO()
+                UserIntent.Previous -> onPrevRequest()
             }
         }
     }
 
     private fun onSurfaceReady(list : List<Pair<CamLocation, SurfaceHolder>>){
+        _effect.value = Effect.OnLoading
+
         readData()
 
         onViewReady(list)
 
-        val thumbnails = mutableMapOf<CamLocation, Uri>()
-
-        mCurrentRecordGroup?.files?.forEach{
-            thumbnails[it.location] = it.thumbnail
-        }?: return
-
         onPrepareRequest(mCurrentRecordGroup ?: return)
-
-        _state.value = _state.value.copy(
-            thumbnails = thumbnails,
-            showThumbnail = true
-        )
     }
 
     private fun readData(){
@@ -96,5 +97,29 @@ internal class Model(
         scope.launch(Dispatchers.Main) {
             navController.navigate(Presenter.Screen.List.route)
         }
+    }
+
+    private fun onPlayStateUpdate(isPlaying : Boolean){
+        _state.value = _state.value.copy(isPlaying = isPlaying)
+    }
+
+    private fun onVideoReady(){
+        _effect.value = null
+
+        val thumbnails = mutableMapOf<CamLocation, Uri>()
+
+        mCurrentRecordGroup?.files?.forEach{
+            thumbnails[it.location] = it.thumbnail
+        }?: return
+
+        _state.value = _state.value.copy(
+            thumbnails = thumbnails,
+            showThumbnail = true
+        )
+    }
+
+    private fun onTimeUpdate(position : Long, duration : Long){
+        val progress : Float  = position.toFloat() / duration.toFloat()
+        _state.value = _state.value.copy(progress = progress)
     }
 }

@@ -2,14 +2,19 @@ package com.auo.dvr_ui.presentation.contents.replay
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -17,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.auo.dvr_ui.R
 import com.auo.dvr_ui.presentation.Presenter
 import com.auo.dvr_ui.presentation.contents.replay.component.DisplayComponent
+import com.auo.dvr_ui.presentation.contents.replay.component.EffectComponent
 import kotlinx.coroutines.flow.StateFlow
 
 internal class View(
@@ -38,7 +44,7 @@ internal class View(
     @Composable
     override fun Draw(modifier: Modifier) {
         val mState by state.collectAsState()
-        val mEffect = effect.collectAsState()
+        val mEffect by effect.collectAsState()
 
         val mContext = LocalContext.current
 
@@ -70,6 +76,20 @@ internal class View(
                 onNext = {intentHandler(UserIntent.Next)},
                 onBack = {intentHandler(UserIntent.Back)}
             )
+        }
+
+        EffectHandler(effect = mEffect)
+    }
+
+    @Composable
+    private fun EffectHandler(effect: Effect?){
+        if(effect == null)
+            return
+
+        when(effect){
+            Effect.OnLoading ->{
+                EffectComponent.OnLoading()
+            }
         }
     }
 }

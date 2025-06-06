@@ -12,6 +12,7 @@ interface ISyncVideoPlayer<T : Any> {
     fun pause()
     fun stop()
     fun release()
+    fun reset()
 
     val tag : T
     val isPlaying : Boolean
