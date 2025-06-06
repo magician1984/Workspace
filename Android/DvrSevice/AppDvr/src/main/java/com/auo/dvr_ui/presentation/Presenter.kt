@@ -27,7 +27,7 @@ import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.compose.DialogNavigator
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.DvrState
 import com.auo.dvr_ui.entity.IUseCase
 import com.auo.dvr_ui.entity.IUseCaseDeleteGroups
@@ -37,12 +37,14 @@ import com.auo.dvr_ui.entity.IUseCaseLockGroups
 import com.auo.dvr_ui.entity.IUseCaseRegisterDvrStateUpdateListener
 import com.auo.dvr_ui.entity.IUseCaseRegisterRecordUpdateListener
 import com.auo.dvr_ui.entity.IUseCaseUnlockGroups
+import com.auo.dvr_ui.framework.ISyncVideoController
 import com.auo.dvr_ui.ui.theme.DvrServiceTheme
 import com.auo.dvr_ui.usecase.IPresenter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import com.auo.dvr_ui.presentation.contents.list.Model as ListModel
 import com.auo.dvr_ui.presentation.contents.list.View as ListView
 import com.auo.dvr_ui.presentation.contents.replay.Model as ReplayModel
@@ -51,9 +53,11 @@ import com.auo.dvr_ui.presentation.contents.replay.View as ReplayView
 private typealias ViewContent = @Composable (PaddingValues) -> Unit
 
 class Presenter(
-    private val renderer: ComponentActivity
+    private val renderer: ComponentActivity,
+    private val videoController: ISyncVideoController<CamLocation, *>,
+    vararg useCases: IUseCase
 ) : IPresenter {
-    sealed class Screen(val route : String){
+    sealed class Screen(val route: String) {
         data object List : Screen("list")
         data object Replay : Screen("replay")
     }
@@ -92,13 +96,12 @@ class Presenter(
     private val mCurrentView: MutableState<ViewContent> =
         mutableStateOf({ innerPadding -> OnLoading(innerPadding) })
 
-    private val mNavHostController : NavHostController = NavHostController(renderer).apply {
+    private val mNavHostController: NavHostController = NavHostController(renderer).apply {
         navigatorProvider.addNavigator(ComposeNavigator())
         navigatorProvider.addNavigator(DialogNavigator())
     }
 
-    override fun summitUseCases(vararg useCases: IUseCase) {
-        mUseCaseList.clear()
+    init {
         mUseCaseList.addAll(useCases)
         findUseCase<IUseCaseRegisterDvrStateUpdateListener>().invoke(::onDvrStateUpdate)
     }
@@ -124,17 +127,16 @@ class Presenter(
             val listModel: ListModel = getModel()
             listView = ListView(listModel.state, listModel.effect, listModel::handleUserIntent)
 
-            val replayModel : ReplayModel = getModel()
-            replayView = ReplayView(replayModel.state, replayModel.effect, replayModel::handleUserIntent)
+            val replayModel: ReplayModel = getModel()
+            replayView =
+                ReplayView(replayModel.state, replayModel.effect, replayModel::handleUserIntent)
 
         } catch (e: IllegalStateException) {
             mCurrentView.value = { padding -> OnError(padding, e.message ?: "Unknown Error") }
             return
         }
 
-        val mNavController = rememberNavController()
-
-        NavHost(navController = mNavHostController, startDestination = Screen.List.route){
+        NavHost(navController = mNavHostController, startDestination = Screen.List.route) {
             composable(Screen.List.route) {
                 listView.Draw(modifier = Modifier.padding(innerPadding))
             }
@@ -220,10 +222,32 @@ class Presenter(
                         unlockGroups = { findUseCase<IUseCaseUnlockGroups>().invoke(it) },
                         deleteGroups = { findUseCase<IUseCaseDeleteGroups>().invoke(it) }
                     ) as T
+
                     ReplayModel::class -> ReplayModel(
                         scope = mBackgroundScope,
-                        navController = mNavHostController
+                        navController = mNavHostController,
+                        onViewReady = { list ->
+                            list.forEach { pair ->
+                                videoController.setView(pair.first, pair.second)
+                            }
+                        },
+                        onPlayRequest = {
+                            videoController.play()
+                        },
+                        onPauseRequest = {
+                            videoController.pause()
+                        },
+                        onNextRequest = {},
+                        onPrevRequest = {},
+                        onPrepareRequest = {
+                            mBackgroundScope.launch {
+                                it.files.forEach { file ->
+                                    videoController.prepare(file.location, file.uri)
+                                }
+                            }
+                        }
                     ) as T
+
                     else -> error("Model not found: ${T::class.java.name}")
                 }
                 mModelList.add(model)

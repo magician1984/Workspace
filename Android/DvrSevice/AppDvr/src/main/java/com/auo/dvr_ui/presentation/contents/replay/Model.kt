@@ -1,7 +1,8 @@
 package com.auo.dvr_ui.presentation.contents.replay
 
-import androidx.compose.runtime.mutableStateOf
-import androidx.media3.exoplayer.ExoPlayer
+import android.net.Uri
+import android.view.SurfaceHolder
+import android.view.TextureView
 import androidx.navigation.NavHostController
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.RecordGroup
@@ -14,12 +15,18 @@ import kotlinx.coroutines.launch
 
 internal class Model(
     scope: CoroutineScope,
-    navController: NavHostController
+    navController: NavHostController,
+    private val onViewReady : (List<Pair<CamLocation, SurfaceHolder>>) -> Unit,
+    private val onPrepareRequest : (RecordGroup) -> Unit,
+    private val onPlayRequest : () -> Unit,
+    private val onPauseRequest : () -> Unit,
+    private val onNextRequest : () -> Unit,
+    private val onPrevRequest : () -> Unit
 ) : Presenter.IModel<UiState, UserIntent, Effect>(scope, navController) {
     private val _state : MutableStateFlow<UiState> = MutableStateFlow(UiState(
-        focusLocation = null,
         isPlaying = false,
-        recordGroup = null
+        thumbnails = emptyMap(),
+        showThumbnail = false
     ))
 
     private val _effect : MutableStateFlow<Effect?> = MutableStateFlow(null)
@@ -37,21 +44,42 @@ internal class Model(
     override fun handleUserIntent(intent: UserIntent) {
         scope.launch {
             when(intent){
-                is UserIntent.SurfaceReady -> onSurfaceReady()
-                UserIntent.Pause -> TODO()
+                is UserIntent.SurfaceReady -> onSurfaceReady(intent.list)
                 is UserIntent.SeekTo -> TODO()
                 is UserIntent.SelectCamera -> TODO()
-                UserIntent.Start -> TODO()
-                UserIntent.Stop -> TODO()
                 UserIntent.Back -> onBack()
+                UserIntent.Next -> TODO()
+                UserIntent.PlayStateSwitch ->{
+                    if(_state.value.isPlaying){
+                        onPauseRequest()
+                        _state.value = _state.value.copy(isPlaying = false)
+                    }else{
+                        onPlayRequest()
+                        _state.value = _state.value.copy(isPlaying = true, showThumbnail = false)
+                    }
+                }
+                UserIntent.Previous -> TODO()
             }
         }
     }
 
-    private fun onSurfaceReady(){
+    private fun onSurfaceReady(list : List<Pair<CamLocation, SurfaceHolder>>){
         readData()
 
+        onViewReady(list)
 
+        val thumbnails = mutableMapOf<CamLocation, Uri>()
+
+        mCurrentRecordGroup?.files?.forEach{
+            thumbnails[it.location] = it.thumbnail
+        }?: return
+
+        onPrepareRequest(mCurrentRecordGroup ?: return)
+
+        _state.value = _state.value.copy(
+            thumbnails = thumbnails,
+            showThumbnail = true
+        )
     }
 
     private fun readData(){

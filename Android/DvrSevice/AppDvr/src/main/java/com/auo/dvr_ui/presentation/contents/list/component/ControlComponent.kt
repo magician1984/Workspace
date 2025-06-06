@@ -6,11 +6,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,6 +86,7 @@ data object ControlComponent {
     fun SelectAllButtonLayer(
         modifier: Modifier,
         boardColor: Color,
+        enable : Boolean,
         onClick: () -> Unit
     ) {
         val mContext: Context = LocalContext.current
@@ -91,15 +95,22 @@ data object ControlComponent {
             mContext.getText(R.string.select_all).toString()
         }
 
-        CommonComponents.RoundedButton(
-            modifier = modifier,
-            label = mLabel,
-            borderColor = boardColor,
-            borderWidth = OUTLINE_BOARD_WIDTH,
-            backgroundColor = Color.Transparent,
-            textColor = Color.White,
-            onClick = onClick
-        )
+        val mVisible by remember(enable) {
+            mutableStateOf(enable)
+        }
+        if(mVisible){
+            CommonComponents.RoundedButton(
+                modifier = modifier,
+                label = mLabel,
+                borderColor = boardColor,
+                borderWidth = OUTLINE_BOARD_WIDTH,
+                backgroundColor = Color.Transparent,
+                textColor = Color.White,
+                onClick = onClick
+            )
+        }else{
+            Spacer(modifier = modifier)
+        }
     }
 
     @Composable

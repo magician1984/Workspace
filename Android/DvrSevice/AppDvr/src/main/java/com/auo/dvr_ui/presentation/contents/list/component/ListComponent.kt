@@ -1,7 +1,7 @@
 package com.auo.dvr_ui.presentation.contents.list.component
 
+import android.content.Context
 import android.net.Uri
-import android.widget.ImageView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -18,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -44,7 +46,8 @@ data object ListComponent {
     data class Style(val columnCount: Int, val itemStyle: ItemStyle)
 
     private val ITEM_CORNER_RADIUS = 20.dp
-    private val ITEM_PADDING = PaddingValues(start = 26.dp, end = 26.dp, top = 15.dp, bottom = 15.dp)
+    private val ITEM_PADDING =
+        PaddingValues(start = 26.dp, end = 26.dp, top = 15.dp, bottom = 15.dp)
     private const val ITEM_ASPECT_RATIO = 4f / 3f
     private val ITEM_BORDER_WIDTH = 7.dp
     private val ITEM_TEXT_SIZE = 24.sp
@@ -63,6 +66,10 @@ data object ListComponent {
             mutableStateOf(style)
         }
 
+        val mSelectMode by remember(selectMode) {
+            mutableStateOf(selectMode)
+        }
+
         LazyVerticalGrid(
             modifier = modifier,
             columns = GridCells.Fixed(style.columnCount),
@@ -70,23 +77,16 @@ data object ListComponent {
         ) {
             items(list.size) { index ->
                 val recordGroup = list[index]
+                val selected = if (mSelectMode) selectedList.contains(recordGroup) else false
 
-                if(selectMode){
-                    ItemInSelectMode(
-                        modifier = Modifier.padding(ITEM_PADDING),
-                        item = recordGroup,
-                        selected = selectedList.contains(recordGroup),
-                        style = mStyle.itemStyle,
-                        onItemClicked = onItemClicked
-                    )
-                }else{
-                    Item(
-                        modifier = Modifier.padding(ITEM_PADDING),
-                        style = mStyle.itemStyle,
-                        onItemClicked = onItemClicked,
-                        item = recordGroup
-                    )
-                }
+                Item(
+                    modifier = Modifier.padding(ITEM_PADDING),
+                    item = recordGroup,
+                    selectMode = mSelectMode,
+                    style = mStyle.itemStyle,
+                    selected = selected,
+                    onItemClicked = onItemClicked
+                )
             }
         }
     }
@@ -95,6 +95,8 @@ data object ListComponent {
     private fun Item(
         modifier: Modifier,
         item: RecordGroup,
+        selectMode: Boolean = false,
+        selected: Boolean = false,
         style: ItemStyle,
         onItemClicked: (RecordGroup) -> Unit
     ) {
@@ -102,74 +104,110 @@ data object ListComponent {
             mutableStateOf(style)
         }
 
-        val model = ImageRequest.Builder(LocalContext.current)
-            .data(item.getThumbnail())
-            .build()
-
-        Column(modifier = modifier
-            .clickable { onItemClicked(item) }) {
-            AsyncImage(
-                model = model,
-                contentDescription = null,
-                contentScale = ContentScale.FillBounds,
-                modifier = Modifier
-                    .aspectRatio(ITEM_ASPECT_RATIO)
-                    .clip(RoundedCornerShape(ITEM_CORNER_RADIUS))
+        Column(
+            modifier = modifier
+                .clickable { onItemClicked(item) }) {
+            ItemImage(
+                modifier = Modifier.aspectRatio(ITEM_ASPECT_RATIO),
+                uri = item.getThumbnail(),
+                showSelectionLayer = selectMode,
+                selected = selected
             )
-            Box(modifier = Modifier.fillMaxWidth().padding(top = 13.dp)){
-                Text(text = mStyle.dateFormat.format(Date(item.timestamp)), fontSize = ITEM_TEXT_SIZE)
-
-                Image(
-                    modifier = Modifier.align(Alignment.CenterEnd).then(if(item.type == RecordType.Locked) Modifier else Modifier.alpha(0f)),
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_dvr_lock),
-                    contentDescription = null)
-            }
+            ItemLabel(
+                modifier = Modifier,
+                text = mStyle.dateFormat.format(Date(item.timestamp)),
+                locked = item.type == RecordType.Locked
+            )
         }
     }
 
     @Composable
-    private fun ItemInSelectMode(
+    private fun ItemImage(
         modifier: Modifier,
-        item: RecordGroup,
-        selected: Boolean,
-        style: ItemStyle,
-        onItemClicked: (RecordGroup) -> Unit
-    ){
-        val mStyle by remember(style) {
-            mutableStateOf(style)
+        uri: Uri,
+        showSelectionLayer: Boolean = false,
+        selected: Boolean = false
+    ) {
+        val mShowCheckBox by remember(showSelectionLayer) {
+            mutableStateOf(showSelectionLayer)
         }
 
-        val mBoardColor by remember(selected) {
-            mutableStateOf(if (selected) mStyle.highlightColor else Color.Transparent)
-        }
+        val mContext: Context = LocalContext.current
 
-        val model = ImageRequest.Builder(LocalContext.current)
-            .data(item.getThumbnail())
+        val model = ImageRequest.Builder(mContext)
+            .data(uri)
             .build()
 
-        Column(modifier = modifier
-            .clickable { onItemClicked(item) }) {
+        val mBorderColor by remember(selected) {
+            mutableStateOf(
+                if (selected) Color(mContext.getColor(R.color.color_primary_1)) else Color.Transparent
+            )
+        }
+
+        Box(
+            modifier = modifier
+                .clip(RoundedCornerShape(ITEM_CORNER_RADIUS))
+                .border(ITEM_BORDER_WIDTH, mBorderColor, RoundedCornerShape(ITEM_CORNER_RADIUS))
+        ) {
             AsyncImage(
                 model = model,
                 contentDescription = null,
                 contentScale = ContentScale.FillBounds,
                 modifier = Modifier
-                    .aspectRatio(ITEM_ASPECT_RATIO)
-                    .clip(RoundedCornerShape(ITEM_CORNER_RADIUS))
-                    .border(ITEM_BORDER_WIDTH, mBoardColor, RoundedCornerShape(ITEM_CORNER_RADIUS))
             )
-            Box(modifier = Modifier.fillMaxWidth().padding(top = 13.dp)){
-                Text(text = mStyle.dateFormat.format(Date(item.timestamp)), fontSize = ITEM_TEXT_SIZE)
+
+            Image(
+                imageVector = ImageVector.vectorResource(R.drawable.ic_stack),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset((-20).dp, 17.dp),
+                contentDescription = null
+            )
+
+            if (mShowCheckBox) {
+                val mBoxRes by remember(selected) {
+                    mutableIntStateOf(if (selected) R.drawable.selectbox_select else R.drawable.selectbox)
+                }
 
                 Image(
-                    modifier = Modifier.align(Alignment.CenterEnd).then(if(item.type == RecordType.Locked) Modifier else Modifier.alpha(0f)),
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_dvr_lock),
-                    contentDescription = null)
+                    imageVector = ImageVector.vectorResource(mBoxRes),
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .offset(20.dp, 17.dp),
+                    contentDescription = null
+                )
             }
+
         }
     }
 
-    private fun RecordGroup.getThumbnail() : Uri{
+    @Composable
+    private fun ItemLabel(modifier: Modifier, text: String, locked: Boolean) {
+        val mLocked by remember(locked) {
+            mutableStateOf(locked)
+        }
+
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(top = 20.dp)
+        ) {
+            Text(
+                text = text,
+                fontSize = ITEM_TEXT_SIZE
+            )
+
+            Image(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .then(if (mLocked) Modifier else Modifier.alpha(0f)),
+                imageVector = ImageVector.vectorResource(R.drawable.ic_dvr_lock),
+                contentDescription = null
+            )
+        }
+    }
+
+    private fun RecordGroup.getThumbnail(): Uri {
         return files[0].thumbnail
     }
 }

@@ -15,10 +15,10 @@
       </SelectionState>
       <SelectionState runConfigName="AppDvr">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-04-16T05:48:16.165453535Z">
+        <DropdownSelection timestamp="2025-06-05T09:15:09.616292349Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=/home/bruce/.android/avd/Pixel_Tablet_API_35.avd" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=/home/bruce/.android/avd/7255_Dev.avd" />
             </handle>
           </Target>
         </DropdownSelection>

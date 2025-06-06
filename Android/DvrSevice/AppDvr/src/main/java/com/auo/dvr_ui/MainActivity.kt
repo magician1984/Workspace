@@ -5,7 +5,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import com.auo.dvr.DvrService
+import com.auo.dvr_core.CamLocation
 import com.auo.dvr_ui.datasource.Datasource
+import com.auo.dvr_ui.framework.ISyncVideoController
+import com.auo.dvr_ui.framework.exo.ExoVideoController
 import com.auo.dvr_ui.presentation.Presenter
 import com.auo.dvr_ui.usecase.IDataSource
 import com.auo.dvr_ui.usecase.IPresenter
@@ -21,7 +24,9 @@ import com.auo.dvr_ui.usecase.UseCaseUnmountStorage
 class MainActivity : ComponentActivity() {
     private lateinit var mPresenter: IPresenter
 
-    private lateinit var mDataSource : IDataSource
+    private lateinit var mDataSource: IDataSource
+
+    private lateinit var mSyncVideoController: ISyncVideoController<CamLocation, *>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,12 +38,23 @@ class MainActivity : ComponentActivity() {
         initialize()
     }
 
-    private fun initialize(){
+    override fun onDestroy() {
+        mSyncVideoController.release()
+        super.onDestroy()
+    }
+
+    private fun initialize() {
+        mSyncVideoController = ExoVideoController()
+
+        CamLocation.entries.forEach { location ->
+            mSyncVideoController.createPlayer(this, location)
+        }
+
         mDataSource = Datasource(this)
 
-        mPresenter = Presenter(this)
-
-        mPresenter.summitUseCases(
+        mPresenter = Presenter(
+            this,
+            mSyncVideoController,
             UseCaseGetListFiles(mDataSource),
             UseCaseRegisterRecordUpdateListener(mDataSource),
             UseCaseGetDvrState(mDataSource),

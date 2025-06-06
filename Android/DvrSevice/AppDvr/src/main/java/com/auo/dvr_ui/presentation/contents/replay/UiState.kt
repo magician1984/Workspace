@@ -1,7 +1,11 @@
 package com.auo.dvr_ui.presentation.contents.replay
 
+import android.net.Uri
 import com.auo.dvr_core.CamLocation
-import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_ui.presentation.Presenter
 
-data class UiState(val focusLocation : CamLocation?, val isPlaying : Boolean, val recordGroup : RecordGroup?) : Presenter.IUiState
+data class UiState(
+    val isPlaying: Boolean,
+    val showThumbnail: Boolean,
+    val thumbnails : Map<CamLocation, Uri>
+) : Presenter.IUiState

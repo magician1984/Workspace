@@ -49,7 +49,7 @@ internal class Model(
                 is UserIntent.ItemClicked -> onItemClicked(intent.item)
                 UserIntent.Lock -> lockGroups(_state.value.selectedGroups)
                 is UserIntent.SelectModeChanged -> {
-                    _state.value = _state.value.copy(selectMode = intent.selectMode)
+                    _state.value = _state.value.copy(selectMode = intent.selectMode, selectedGroups = emptyList())
                 }
                 UserIntent.Unlock -> unlockGroups(_state.value.selectedGroups)
                 UserIntent.Init -> {

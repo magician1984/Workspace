@@ -51,7 +51,7 @@ internal class View(
 
         Column(modifier = modifier) {
             DisplayComponent.DisplayLayer(modifier = Modifier.weight(1f), mState, onReady = {
-//                intentHandler(UserIntent.OnReady(it))
+                intentHandler(UserIntent.SurfaceReady(it))
             })
             DisplayComponent.ControlLayer(modifier = Modifier
                 .fillMaxWidth()
@@ -65,9 +65,9 @@ internal class View(
                     mediaBtnSpace = MEDIA_BTN_SPACE,
                     btnLayerPadding = CONTROL_BAR_INNER_PADDING
                 ),
-                onPlayStateSwitch = {},
-                onPrevious = {},
-                onNext = {},
+                onPlayStateSwitch = {intentHandler(UserIntent.PlayStateSwitch)},
+                onPrevious = {intentHandler(UserIntent.Previous)},
+                onNext = {intentHandler(UserIntent.Next)},
                 onBack = {intentHandler(UserIntent.Back)}
             )
         }
