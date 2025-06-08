@@ -13,26 +13,5 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 object EffectComponent {
-    @Composable
-    fun OnLoading(){
-        AlertDialog(
-            onDismissRequest = { },
-            confirmButton = {},
-            title = null,
-            text = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .padding(end = 16.dp),
-                        strokeWidth = 2.dp
-                    )
-                    Text(text = "OnLoading")
-                }
-            },
-            shape = RoundedCornerShape(12.dp)
-        )
-    }
+
 }

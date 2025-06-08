@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.auo.dvr_ui.R
+import com.auo.dvr_ui.presentation.PlayerState
 import com.auo.dvr_ui.presentation.Presenter
 import com.auo.dvr_ui.presentation.contents.replay.component.DisplayComponent
 import com.auo.dvr_ui.presentation.contents.replay.component.EffectComponent
@@ -44,7 +45,6 @@ internal class View(
     @Composable
     override fun Draw(modifier: Modifier) {
         val mState by state.collectAsState()
-        val mEffect by effect.collectAsState()
 
         val mContext = LocalContext.current
 
@@ -56,14 +56,13 @@ internal class View(
         }
 
         Column(modifier = modifier) {
-            DisplayComponent.DisplayLayer(modifier = Modifier.weight(1f), mState, onReady = {
+            DisplayComponent.DisplayLayer(modifier = Modifier.weight(1f), onReady = {
                 intentHandler(UserIntent.SurfaceReady(it))
             })
             DisplayComponent.ControlLayer(modifier = Modifier
                 .fillMaxWidth()
                 .height(CONTROL_BAR_HEIGHT),
-                isPlaying = mState.isPlaying,
-                time = 0L,
+                state = mState,
                 config = DisplayComponent.ControlLayerConfig(
                     progressHigh = PROGRESS_HEIGHT,
                     progressBackgroundColor = mProgressBgColor,
@@ -78,18 +77,5 @@ internal class View(
             )
         }
 
-        EffectHandler(effect = mEffect)
-    }
-
-    @Composable
-    private fun EffectHandler(effect: Effect?){
-        if(effect == null)
-            return
-
-        when(effect){
-            Effect.OnLoading ->{
-                EffectComponent.OnLoading()
-            }
-        }
     }
 }

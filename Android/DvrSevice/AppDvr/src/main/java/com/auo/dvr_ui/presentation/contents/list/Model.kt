@@ -1,25 +1,27 @@
 package com.auo.dvr_ui.presentation.contents.list
 
 import android.util.Log
-import androidx.navigation.NavHostController
 import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_core.RecordType
+import com.auo.dvr_ui.presentation.GlobalState
 import com.auo.dvr_ui.presentation.Presenter
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 internal class Model(
     scope: CoroutineScope,
-    navController: NavHostController,
-    private val getRecordGroups: (Set<RecordType>) -> List<RecordGroup>,
-    private val registerListener: (onRecordGroupUpdate: () -> Unit) -> Unit,
+    globalState: StateFlow<GlobalState>,
+    private val onUpdateRecords: (Set<RecordType>)->Unit,
     private val lockGroups: (List<RecordGroup>) -> Unit,
     private val unlockGroups: (List<RecordGroup>) -> Unit,
     private val deleteGroups: (List<RecordGroup>) -> Unit,
-) : Presenter.IModel<UiState, UserIntent, Effect>(scope, navController) {
+    private val onReplayRequest: (RecordGroup) -> Unit
+) : Presenter.IModel<UiState, UserIntent, Effect>(scope, globalState) {
 
     private val _state : MutableStateFlow<UiState> = MutableStateFlow(
         UiState(
@@ -37,6 +39,29 @@ internal class Model(
     override val effect: StateFlow<Effect?>
         get() = _effect
 
+    init {
+        scope.launch {
+            globalState
+                .map { it.records }
+                .distinctUntilChanged()
+                .collect { records ->
+                    _state.update { uiState -> uiState.copy(groupList = records) }
+                }
+
+            globalState.map { it.filterType }.distinctUntilChanged().collect {
+                if(it.isEmpty())
+                    return@collect
+                val displayType = when(it.toList()[0]){
+                    RecordType.Normal -> UiState.DisplayType.Normal
+                    RecordType.Protected -> UiState.DisplayType.Incident
+                    RecordType.Locked -> UiState.DisplayType.Locked
+                    else -> UiState.DisplayType.Normal
+                }
+                _state.update { uiState -> uiState.copy(displayType = displayType) }
+            }
+        }
+    }
+
     override fun handleUserIntent(intent: UserIntent) {
         scope.launch {
             Log.d("ListModel", "Intent: $intent")
@@ -52,10 +77,6 @@ internal class Model(
                     _state.value = _state.value.copy(selectMode = intent.selectMode, selectedGroups = emptyList())
                 }
                 UserIntent.Unlock -> unlockGroups(_state.value.selectedGroups)
-                UserIntent.Init -> {
-                    registerListener(::updateGroups)
-                    updateGroups()
-                }
 
                 UserIntent.SelectAll -> {
                     val groups  = _state.value.groupList
@@ -72,12 +93,7 @@ internal class Model(
             UiState.DisplayType.Locked -> setOf(RecordType.Locked)
         }
 
-        val list = getRecordGroups(filter)
-
-        _state.value = _state.value.copy(
-            groupList = list,
-            selectedGroups = emptyList()
-        )
+        onUpdateRecords(filter)
     }
 
     private fun onItemClicked(item: RecordGroup){
@@ -91,11 +107,7 @@ internal class Model(
             }
             _state.value = _state.value.copy(selectedGroups = selected)
         }else{
-            scope.launch(Dispatchers.Main){
-                navController.currentBackStackEntry?.savedStateHandle?.set("record", item)
-                navController.currentBackStackEntry?.savedStateHandle?.set("list", _state.value.groupList.toTypedArray())
-                navController.navigate(Presenter.Screen.Replay.route)
-            }
+            onReplayRequest(item)
         }
     }
 }

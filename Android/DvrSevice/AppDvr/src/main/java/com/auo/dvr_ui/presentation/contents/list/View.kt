@@ -86,10 +86,6 @@ internal class View(
 
         val scrollState = rememberLazyGridState()
 
-        LaunchedEffect(LocalContext.current) {
-            intentHandler(UserIntent.Init)
-        }
-
         Box(modifier = modifier) {
             Column(
                 modifier = Modifier

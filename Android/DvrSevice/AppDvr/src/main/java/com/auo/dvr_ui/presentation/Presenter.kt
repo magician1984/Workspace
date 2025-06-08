@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +30,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.DvrState
+import com.auo.dvr_core.RecordType
 import com.auo.dvr_ui.entity.IUseCase
 import com.auo.dvr_ui.entity.IUseCaseDeleteGroups
 import com.auo.dvr_ui.entity.IUseCaseGetDvrState
@@ -43,7 +45,11 @@ import com.auo.dvr_ui.usecase.IPresenter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.auo.dvr_ui.presentation.contents.list.Model as ListModel
 import com.auo.dvr_ui.presentation.contents.list.View as ListView
@@ -70,7 +76,7 @@ class Presenter(
 
     internal abstract class IModel<S : IUiState, I : IUserIntent, E : IEffect>(
         protected val scope: CoroutineScope,
-        protected val navController: NavHostController
+        protected val globalState: StateFlow<GlobalState>,
     ) {
         abstract val state: StateFlow<S>
         abstract val effect: StateFlow<E?>
@@ -93,6 +99,21 @@ class Presenter(
 
     private val mBackgroundScope = CoroutineScope(Dispatchers.IO)
 
+    private val mGlobalState: MutableStateFlow<GlobalState> =
+        MutableStateFlow(GlobalState(null, setOf(RecordType.Normal), emptyList(), Screen.List))
+
+    private val mPlayerState: MutableStateFlow<PlayerState> =
+        MutableStateFlow(
+            PlayerState(
+                isReady = false,
+                isPlaying = false,
+                position = 0L,
+                duration = 0L
+            )
+        )
+
+    private val mGlobalEffect: MutableStateFlow<GlobalEffect?> = MutableStateFlow(null)
+
     private val mCurrentView: MutableState<ViewContent> =
         mutableStateOf({ innerPadding -> OnLoading(innerPadding) })
 
@@ -104,6 +125,34 @@ class Presenter(
     init {
         mUseCaseList.addAll(useCases)
         findUseCase<IUseCaseRegisterDvrStateUpdateListener>().invoke(::onDvrStateUpdate)
+        findUseCase<IUseCaseRegisterRecordUpdateListener>().invoke(::onRecordsUpdate)
+
+        videoController.addOnReadyListener {
+            mPlayerState.update { state ->
+                state.copy(isReady = true)
+            }
+        }
+        videoController.addOnPositionUpdateListener { position, duration ->
+            mPlayerState.update { state ->
+                state.copy(
+                    position = position,
+                    duration = duration
+                )
+            }
+        }
+        videoController.addOnPlayStateUpdateListener { isPlaying ->
+            mPlayerState.update { state ->
+                state.copy(
+                    isPlaying = isPlaying
+                )
+            }
+        }
+
+        mBackgroundScope.launch {
+            mGlobalState.map { it.page }.distinctUntilChanged().collect { page ->
+                mNavHostController.navigate(page.route)
+            }
+        }
     }
 
     override fun render() {
@@ -135,6 +184,8 @@ class Presenter(
             mCurrentView.value = { padding -> OnError(padding, e.message ?: "Unknown Error") }
             return
         }
+
+
 
         NavHost(navController = mNavHostController, startDestination = Screen.List.route) {
             composable(Screen.List.route) {
@@ -205,27 +256,37 @@ class Presenter(
         }
     }
 
+    private fun onRecordsUpdate() {
+        val filter = mGlobalState.value.filterType
+        onRefreshRecords(filter)
+    }
+
+    private fun onRefreshRecords(filter: Set<RecordType>) {
+        val records = findUseCase<IUseCaseGetRecordGroups>().invoke(filter)
+
+        mGlobalState.update { state -> state.copy(records = records) }
+    }
+
     private inline fun <reified T : IModel<*, *, *>> getModel(): T {
         return mModelList.find { it is T } as? T
             ?: run {
                 val model = when (T::class) {
                     ListModel::class -> ListModel(
                         scope = mBackgroundScope,
-                        navController = mNavHostController,
-                        getRecordGroups = { findUseCase<IUseCaseGetRecordGroups>().invoke(set = it) },
-                        registerListener = {
-                            findUseCase<IUseCaseRegisterRecordUpdateListener>().invoke(
-                                it
-                            )
-                        },
+                        globalState = mGlobalState,
+                        onUpdateRecords = { onRefreshRecords(it) },
                         lockGroups = { findUseCase<IUseCaseLockGroups>().invoke(it) },
                         unlockGroups = { findUseCase<IUseCaseUnlockGroups>().invoke(it) },
-                        deleteGroups = { findUseCase<IUseCaseDeleteGroups>().invoke(it) }
+                        deleteGroups = { findUseCase<IUseCaseDeleteGroups>().invoke(it) },
+                        onReplayRequest = {
+                            mNavHostController.navigate(Screen.Replay.route)
+                        }
                     ) as T
 
                     ReplayModel::class -> ReplayModel(
                         scope = mBackgroundScope,
-                        navController = mNavHostController,
+                        globalState = mGlobalState,
+                        playerState = mPlayerState,
                         onViewReady = { list ->
                             list.forEach { pair ->
                                 videoController.setView(pair.first, pair.second)
@@ -237,23 +298,30 @@ class Presenter(
                         onPauseRequest = {
                             videoController.pause()
                         },
-                        onNextRequest = {},
-                        onPrevRequest = {},
-                        onPrepareRequest = {
-                            mBackgroundScope.launch {
-                                it.files.forEach { file ->
-                                    videoController.prepare(file.location, file.uri)
-                                }
+                        onNextRequest = {
+                            val currentIndex = mGlobalState.value.records.indexOf(mGlobalState.value.focusRecord)
+                            if(currentIndex >= mGlobalState.value.records.lastIndex)
+                                return@ReplayModel
+                            val nextRecord = mGlobalState.value.records[currentIndex + 1]
+                            videoController.stop()
+                            mPlayerState.update { state->state.copy(isReady = false) }
+                            nextRecord.files.forEach {
+                                videoController.prepare(it.location, it.uri)
                             }
                         },
-                        registerPlayStateUpdate = {
-                            videoController.addOnPlayStateUpdateListener(it)
+                        onPrevRequest = {
+                            val currentIndex = mGlobalState.value.records.indexOf(mGlobalState.value.focusRecord)
+                            if(currentIndex <= 0)
+                                return@ReplayModel
+                            val nextRecord = mGlobalState.value.records[currentIndex - 1]
+                            videoController.stop()
+                            mPlayerState.update { state->state.copy(isReady = false) }
+                            nextRecord.files.forEach {
+                                videoController.prepare(it.location, it.uri)
+                            }
                         },
-                        registerPositionUpdate = {
-                            videoController.addOnPositionUpdateListener(it)
-                        },
-                        registerOnVideoReady = {
-                            videoController.addOnReadyListener(it)
+                        onBackRequest = {
+                            mGlobalState.update { state-> state.copy(focusRecord = null, page = Screen.List) }
                         }
                     ) as T
 

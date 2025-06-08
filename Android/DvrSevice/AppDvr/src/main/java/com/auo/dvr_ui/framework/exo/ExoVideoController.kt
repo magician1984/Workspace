@@ -53,6 +53,7 @@ class ExoVideoController<T : Any> : ISyncVideoController<T, ExoVideoPlayer<T>> {
     private var _currentPosition: Long = 0L
 
     private val handlerThread = HandlerThread("exo-control").apply { start() }
+    private val timerThread = HandlerThread("exo-timer").apply { start() }
 
     private val mHandler: Handler = Handler(handlerThread.looper)
 
@@ -87,6 +88,10 @@ class ExoVideoController<T : Any> : ISyncVideoController<T, ExoVideoPlayer<T>> {
         mHandler.post {
             mPlayers[tag]?.prepare(uri)
                 ?: throw IllegalArgumentException("Player not found for tag: $tag")
+
+            timer = CustomTimer(durationMillis = 60000, intervalMillis = 1000, onTick = { position, duration->
+                onPositionUpdateListener?.onUpdate(position, duration)
+            }, onFinish = null, looper = timerThread.looper)
         }
     }
 

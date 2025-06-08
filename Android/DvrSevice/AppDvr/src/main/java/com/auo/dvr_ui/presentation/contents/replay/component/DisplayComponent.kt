@@ -1,5 +1,6 @@
 package com.auo.dvr_ui.presentation.contents.replay.component
 
+import android.annotation.SuppressLint
 import android.graphics.SurfaceTexture
 import android.net.Uri
 import android.util.Log
@@ -62,10 +63,10 @@ object DisplayComponent {
         val btnLayerPadding: PaddingValues
     )
 
+    @SuppressLint("UnusedBoxWithConstraintsScope")
     @Composable
     fun DisplayLayer(
         modifier: Modifier,
-        state: UiState,
         onReady: (List<Pair<CamLocation, SurfaceHolder>>) -> Unit
     ) {
         val camLocations = remember {
@@ -131,8 +132,8 @@ object DisplayComponent {
                         },
                     camLocation = cam,
                     isFocus = isFullScreen,
-                    thumbnail = state.thumbnails[cam],
-                    showThumbnail = state.showThumbnail,
+                    thumbnail = null,
+                    showThumbnail = false,
                     onReady = { location, view ->
                         holdersMap[location] = view
                     },
@@ -145,17 +146,21 @@ object DisplayComponent {
     @Composable
     fun ControlLayer(
         modifier: Modifier,
-        isPlaying: Boolean,
-        time: Long,
+        state: UiState,
         config: ControlLayerConfig,
         onPlayStateSwitch: () -> Unit,
         onPrevious: () -> Unit,
         onNext: () -> Unit,
         onBack: () -> Unit,
     ) {
-        val mProgress by remember(time) {
-            mutableFloatStateOf(time.toFloat() / 60000.toFloat())
+        val mIsPlaying by remember(state.isPlaying) {
+            mutableStateOf(state.isPlaying)
         }
+
+        val mProgress by remember(state.progress) {
+            mutableFloatStateOf(state.progress)
+        }
+
         Column(modifier = modifier) {
             ProgressBar(
                 modifier = Modifier
@@ -192,7 +197,7 @@ object DisplayComponent {
                     )
                     CommonComponents.VectorButton(
                         modifier = Modifier,
-                        iconRes = if (isPlaying) R.drawable.btn_pause else R.drawable.btn_play,
+                        iconRes = if (mIsPlaying) R.drawable.btn_pause else R.drawable.btn_play,
                         onClick = onPlayStateSwitch
                     )
                     CommonComponents.VectorButton(
