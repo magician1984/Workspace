@@ -91,7 +91,7 @@ class ControlModel(private val exitUseCase : IUseCaseExit, private val testUseCa
         val cloneMethods = listOf(CloneMethod.FileChannel)
         val fileSize = listOf(FileSize.Large)
         val modes = listOf(FileAllocateMode.NonPreAllocate)
-        val syncFlags = listOf(true, false)
+        val syncFlags = listOf(true)
 
         Log.d("ControlModel", "Start tests")
         cloneMethods.forEach { method ->

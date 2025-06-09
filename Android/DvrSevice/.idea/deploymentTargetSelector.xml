@@ -4,7 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="PerformanceTester">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-02-25T02:42:22.386785597Z">
+        <DropdownSelection timestamp="2025-06-09T03:54:25.185527749Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="PhysicalDevice" identifier="serial=c884a3e2" />
@@ -15,10 +15,10 @@
       </SelectionState>
       <SelectionState runConfigName="AppDvr">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-04-16T05:48:16.165453535Z">
+        <DropdownSelection timestamp="2025-06-09T00:46:27.472371760Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=/home/bruce/.android/avd/Pixel_Tablet_API_35.avd" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=c884a3e2" />
             </handle>
           </Target>
         </DropdownSelection>
