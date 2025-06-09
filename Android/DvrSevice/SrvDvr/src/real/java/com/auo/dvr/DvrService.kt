@@ -9,7 +9,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.auo.dvr.data.UserIntent
 import com.auo.dvr.launcher.DvrLauncher
-import com.auo.dvr.launcher.detector.UsbDetector
+import com.auo.dvr.detector.UsbDetector
 import com.auo.dvr.launcher.monitor.QNXServerMonitor
 import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrException
@@ -18,7 +18,7 @@ import com.auo.dvr_core.IDvrService
 import java.io.File
 
 class DvrService : Service() {
-    interface IDvrLauncher {
+    internal interface IDvrLauncher {
 
         fun interface OnServiceStateUpdateListener {
             fun onStateUpdate(state: DvrState)
@@ -44,11 +44,8 @@ class DvrService : Service() {
     }
 
 
-    abstract class IServiceApi(protected val mDvrLauncher: IDvrLauncher) : IDvrService.Stub() {
-        abstract fun updateState(state: DvrState)
-    }
 
-    private lateinit var mServiceApi: IServiceApi
+    private lateinit var mServiceApi: IDvrService.Stub
 
     private lateinit var mDvrLauncher: IDvrLauncher
 
@@ -62,11 +59,7 @@ class DvrService : Service() {
             if (!sourceFolder.exists())
                 sourceFolder.mkdirs()
 
-            mDvrLauncher = DvrLauncher(
-                this, sourceFolder, UsbDetector(this), QNXServerMonitor(sourceFolder)
-            )
-
-            mServiceApi = ServiceApiImpl(mDvrLauncher)
+            mServiceApi = DvrServiceApiImpl()
 
             isInitialized = true
 

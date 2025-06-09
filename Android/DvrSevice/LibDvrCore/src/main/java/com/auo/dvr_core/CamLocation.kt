@@ -8,5 +8,6 @@ enum class CamLocation(val code: Int) {
 
     companion object{
         fun fromCode(code: Int) : CamLocation = entries.find { it.code == code }!!
+        fun fromName(name: String) : CamLocation? = entries.find { it.name == name }
     }
 }

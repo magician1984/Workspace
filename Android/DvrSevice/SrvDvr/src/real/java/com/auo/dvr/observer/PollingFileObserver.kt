@@ -1,24 +1,25 @@
-package com.auo.dvr.launcher.observer
+package com.auo.dvr.observer
 
-import com.auo.dvr.launcher.DvrLauncher
+import com.auo.dvr.IFileObserver
+import com.auo.dvr.IFileObserver.EventType
 import java.io.File
 import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
-import com.auo.dvr.launcher.DvrLauncher.IFileManager.EventType
 import java.util.concurrent.Future
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
-internal abstract class PollingFileObserver(
+internal class PollingFileObserver(
     private val mFolder: File,
     private val mInterval: Long
-) : DvrLauncher.IFileObserver {
+) : IFileObserver {
 
     private val mPollingThread: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private var mFuture: Future<*>? = null
 
     private val knownFiles = mutableMapOf<String, Long>() // name -> lastModified
     private val finalizedFiles = mutableSetOf<String>()   // already closed
+
+    private var mCallback : IFileObserver.OnEventCallback? = null
 
     override fun start() {
         mFolder.listFiles()?.forEach { file ->
@@ -37,6 +38,10 @@ internal abstract class PollingFileObserver(
     override fun stop() {
         mFuture?.cancel(true)
         mPollingThread.shutdownNow()
+    }
+
+    override fun setOnEventCallback(callback: IFileObserver.OnEventCallback) {
+        TODO("Not yet implemented")
     }
 
     private val runnable: Runnable = Runnable {
@@ -69,5 +74,9 @@ internal abstract class PollingFileObserver(
             knownFiles.remove(name)
             finalizedFiles.remove(name)
         }
+    }
+
+    private fun onEvent(event: EventType, file: File) {
+        mCallback?.onEvent(event, file)
     }
 }

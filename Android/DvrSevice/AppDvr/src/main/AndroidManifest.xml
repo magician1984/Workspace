@@ -30,6 +30,7 @@
 
         <service
             android:name="com.auo.dvr.DvrService"
+            android:process="com.auo.dvr.DvrService.srv"
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="dataSync" />

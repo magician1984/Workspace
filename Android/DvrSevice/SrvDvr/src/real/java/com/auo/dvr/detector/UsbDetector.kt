@@ -1,21 +1,22 @@
-package com.auo.dvr.launcher.detector
+package com.auo.dvr.detector
 
 import android.content.Context
 import android.os.Environment
 import android.os.storage.StorageManager
 import android.os.storage.StorageVolume
 import android.util.Log
+import com.auo.dvr.IDeviceDetector
 import com.auo.dvr.launcher.DvrLauncher
 import java.io.File
 import java.util.concurrent.Executors
 
-class UsbDetector(mContext: Context) : DvrLauncher.IDeviceDetect {
+internal class UsbDetector(mContext: Context) : IDeviceDetector {
     private data class MountInfo(val uuid: String, val id: String, val path: String)
 
     private var mMountInfo: MountInfo? = null
         set(value) {
             field = value
-            mCallback?.invoke(field != null)
+            mListener?.onUpdate(value != null)
         }
 
     override val mountedFolder: File?
@@ -25,7 +26,11 @@ class UsbDetector(mContext: Context) : DvrLauncher.IDeviceDetect {
             } ?: return null
         }
 
-    private var mCallback: ((Boolean) -> Unit)? = null
+    private var mListener : IDeviceDetector.OnFlashDiskMountStateUpdateListener? = null
+
+    override fun setOnFlashDiskMountStateUpdateListener(listener: IDeviceDetector.OnFlashDiskMountStateUpdateListener) {
+        mListener = listener
+    }
 
     private val mStorageManager: StorageManager =
         mContext.getSystemService(Context.STORAGE_SERVICE) as StorageManager
@@ -57,10 +62,6 @@ class UsbDetector(mContext: Context) : DvrLauncher.IDeviceDetect {
 
                 }
             })
-    }
-
-    override fun onFlashDiskMountStateUpdate(callback: (Boolean) -> Unit) {
-        mCallback = callback
     }
 
     override fun unmount() {
