@@ -8,6 +8,7 @@ internal interface IRecordManager{
         fun onUpdate()
     }
 
+    fun onRootFolderChanged(rootFolder : File?)
     fun onRecordGroupCreated(groupFolder : File)
 
     fun lockRecord(recordGroups: List<RecordGroup>)

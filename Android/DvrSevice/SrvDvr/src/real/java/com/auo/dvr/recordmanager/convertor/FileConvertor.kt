@@ -13,6 +13,7 @@ import java.io.File
  * Convert folder to RecordGroup
  * the folder must be a directory
  * @param folder the folder to convert
+ * @param overrideType override the type of the RecordGroup, used for restore on initial
  * @return the RecordGroup
  * @throws ParseException if parse failed
  * the folder name format is {timestamp} or {timestamp}_evt
@@ -58,7 +59,7 @@ internal class FileConvertor : IConvertor {
 
             val type = overrideType ?: if(folder.name.endsWith("_$EVENT_FOLDER_EXTENSION")) RecordType.Protected else RecordType.Normal
 
-            return RecordGroup(timestamp = timestamp, files = records, type = type)
+            return RecordGroup(timestamp = timestamp, files = records, type = type, uri = Uri.fromFile(folder))
         }catch (e : NumberFormatException){
             throw ParseException("folder name is invalid")
         }

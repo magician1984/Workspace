@@ -6,7 +6,6 @@ import android.os.storage.StorageManager
 import android.os.storage.StorageVolume
 import android.util.Log
 import com.auo.dvr.IDeviceDetector
-import com.auo.dvr.launcher.DvrLauncher
 import java.io.File
 import java.util.concurrent.Executors
 
