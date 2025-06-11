@@ -5,7 +5,9 @@ import com.auo.dvr_ui.presentation.Presenter
 
 sealed class UserIntent : Presenter.IUserIntent{
     data class ItemClicked(val item: RecordGroup) : UserIntent()
+    data object DeleteRequest : UserIntent()
     data object Delete : UserIntent()
+    data object CancelDelete : UserIntent()
     data object Lock : UserIntent()
     data object Unlock : UserIntent()
     data class DisplayTypeChanged(val type: UiState.DisplayType) : UserIntent()

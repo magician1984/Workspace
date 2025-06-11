@@ -153,14 +153,6 @@ object DisplayComponent {
         onNext: () -> Unit,
         onBack: () -> Unit,
     ) {
-        val mIsPlaying by remember(state.isPlaying) {
-            mutableStateOf(state.isPlaying)
-        }
-
-        val mProgress by remember(state.progress) {
-            mutableFloatStateOf(state.progress)
-        }
-
         Column(modifier = modifier) {
             ProgressBar(
                 modifier = Modifier
@@ -168,7 +160,7 @@ object DisplayComponent {
                     .height(config.progressHigh),
                 backgroundColor = config.progressBackgroundColor,
                 progressColor = config.progressTrackColor,
-                progress = mProgress
+                progress = state.progress
             )
 
             Box(
@@ -197,7 +189,7 @@ object DisplayComponent {
                     )
                     CommonComponents.VectorButton(
                         modifier = Modifier,
-                        iconRes = if (mIsPlaying) R.drawable.btn_pause else R.drawable.btn_play,
+                        iconRes = if (state.isPlaying) R.drawable.btn_pause else R.drawable.btn_play,
                         onClick = onPlayStateSwitch
                     )
                     CommonComponents.VectorButton(

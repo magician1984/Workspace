@@ -1,18 +1,14 @@
 package com.auo.dvr_ui.presentation.contents.list
 
 import android.content.Context
-import android.util.Log
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,13 +18,11 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -39,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.auo.dvr_ui.R
 import com.auo.dvr_ui.presentation.Presenter
 import com.auo.dvr_ui.presentation.contents.list.component.ControlComponent
+import com.auo.dvr_ui.presentation.contents.list.component.EffectComponent
 import com.auo.dvr_ui.presentation.contents.list.component.ListComponent
 import com.auo.dvr_ui.presentation.contents.list.component.TabComponent
 import kotlinx.coroutines.flow.StateFlow
@@ -159,14 +154,17 @@ internal class View(
                         )
                     ),
                     onSelectModeChanged = { intentHandler(UserIntent.SelectModeChanged(it)) },
-                    onDeleteRequest = { intentHandler(UserIntent.Delete) },
+                    onDeleteRequest = { intentHandler(UserIntent.DeleteRequest) },
                     onLockRequest = { intentHandler(UserIntent.Lock) },
                     onUnlockRequest = { intentHandler(UserIntent.Unlock) }
                 )
             }
 
             Scrollbar(
-                modifier = Modifier.align(Alignment.CenterEnd).size(8.dp, 800.dp).offset(x = (-59).dp),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(8.dp, 800.dp)
+                    .offset(x = (-59).dp),
                 scrollState = scrollState,
                 backgroundColor = Color.DarkGray,
                 trackColor = highlightColor,
@@ -174,12 +172,23 @@ internal class View(
             )
         }
 
-        EffectHandler(modifier = Modifier.fillMaxSize(),effect = mEffect)
+        EffectHandler(modifier = Modifier.fillMaxSize(), effect = mEffect)
     }
 
     @Composable
-    private fun EffectHandler(modifier: Modifier, effect: Effect?){
+    private fun EffectHandler(modifier: Modifier, effect: Effect?) {
+        when (effect) {
+            is Effect.ConfirmDelete -> EffectComponent.DeleteConfirm(
+                onConfirmed = {
+                    intentHandler(UserIntent.Delete)
+                },
+                onDismiss = {
+                    intentHandler(UserIntent.CancelDelete)
+                },
+            )
 
+            null -> {}
+        }
     }
 
     @Composable
@@ -188,7 +197,7 @@ internal class View(
         scrollState: LazyGridState,
         backgroundColor: Color,
         trackColor: Color,
-        trackHeight : Dp
+        trackHeight: Dp
     ) {
         val layoutInfo = scrollState.layoutInfo
         val totalItems = layoutInfo.totalItemsCount
@@ -216,7 +225,8 @@ internal class View(
             val scrolledPixels = firstIndex * averageItemHeight + offset
 
             // 滾動比例
-            (scrolledPixels / (totalContentHeight - viewportHeightPx).toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
+            (scrolledPixels / (totalContentHeight - viewportHeightPx).toFloat()
+                .coerceAtLeast(1f)).coerceIn(0f, 1f)
         }
 
         val offsetY = with(LocalDensity.current) {

@@ -69,7 +69,8 @@ class ServiceApiImpl(private val context: Context) : IDvrService.Stub() {
                     )
                 }
             }
-            val recordGroup = RecordGroup(timestamp, mockRecordList, RecordType.Normal)
+
+            val recordGroup = RecordGroup(timestamp, mockRecordList, RecordType.Normal, uri = Uri.EMPTY)
             mRecordList.add(recordGroup)
         }
     }

@@ -1,6 +1,5 @@
 package com.auo.dvr_ui.usecase
 
-import android.util.Log
 import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_core.RecordType
 import com.auo.dvr_ui.entity.DvrStateData

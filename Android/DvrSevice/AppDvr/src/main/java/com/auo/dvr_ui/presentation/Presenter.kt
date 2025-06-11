@@ -12,7 +12,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -50,7 +49,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import com.auo.dvr_ui.presentation.contents.list.Model as ListModel
 import com.auo.dvr_ui.presentation.contents.list.View as ListView
 import com.auo.dvr_ui.presentation.contents.replay.Model as ReplayModel
@@ -131,6 +129,7 @@ class Presenter(
             mPlayerState.update { state ->
                 state.copy(isReady = true)
             }
+            mGlobalState.update { state -> state.copy(page = Screen.Replay) }
         }
         videoController.addOnPositionUpdateListener { position, duration ->
             mPlayerState.update { state ->
@@ -148,11 +147,7 @@ class Presenter(
             }
         }
 
-        mBackgroundScope.launch {
-            mGlobalState.map { it.page }.distinctUntilChanged().collect { page ->
-                mNavHostController.navigate(page.route)
-            }
-        }
+
     }
 
     override fun render() {
@@ -185,7 +180,11 @@ class Presenter(
             return
         }
 
-
+        LaunchedEffect(LocalContext.current) {
+            mGlobalState.map { it.page }.distinctUntilChanged().collect { page ->
+                mNavHostController.navigate(page.route)
+            }
+        }
 
         NavHost(navController = mNavHostController, startDestination = Screen.List.route) {
             composable(Screen.List.route) {
@@ -278,8 +277,11 @@ class Presenter(
                         lockGroups = { findUseCase<IUseCaseLockGroups>().invoke(it) },
                         unlockGroups = { findUseCase<IUseCaseUnlockGroups>().invoke(it) },
                         deleteGroups = { findUseCase<IUseCaseDeleteGroups>().invoke(it) },
-                        onReplayRequest = {
-                            mNavHostController.navigate(Screen.Replay.route)
+                        onReplayRequest = { group ->
+                            mGlobalState.update { state -> state.copy(focusRecord = group) }
+                            group.files.forEach {
+                                videoController.prepare(it.location, it.uri)
+                            }
                         }
                     ) as T
 
@@ -293,35 +295,47 @@ class Presenter(
                             }
                         },
                         onPlayRequest = {
+                            Log.d("Presenter", "onPlayRequest: ")
                             videoController.play()
                         },
                         onPauseRequest = {
+                            Log.d("Presenter", "onPauseRequest: ")
                             videoController.pause()
                         },
                         onNextRequest = {
-                            val currentIndex = mGlobalState.value.records.indexOf(mGlobalState.value.focusRecord)
-                            if(currentIndex >= mGlobalState.value.records.lastIndex)
+                            val currentIndex =
+                                mGlobalState.value.records.indexOf(mGlobalState.value.focusRecord)
+                            if (currentIndex >= mGlobalState.value.records.lastIndex)
                                 return@ReplayModel
                             val nextRecord = mGlobalState.value.records[currentIndex + 1]
                             videoController.stop()
-                            mPlayerState.update { state->state.copy(isReady = false) }
+                            mPlayerState.update { state -> state.copy(isReady = false) }
                             nextRecord.files.forEach {
                                 videoController.prepare(it.location, it.uri)
                             }
                         },
                         onPrevRequest = {
-                            val currentIndex = mGlobalState.value.records.indexOf(mGlobalState.value.focusRecord)
-                            if(currentIndex <= 0)
+                            val currentIndex =
+                                mGlobalState.value.records.indexOf(mGlobalState.value.focusRecord)
+                            if (currentIndex <= 0)
                                 return@ReplayModel
                             val nextRecord = mGlobalState.value.records[currentIndex - 1]
                             videoController.stop()
-                            mPlayerState.update { state->state.copy(isReady = false) }
+                            mPlayerState.update { state -> state.copy(isReady = false) }
                             nextRecord.files.forEach {
                                 videoController.prepare(it.location, it.uri)
                             }
                         },
                         onBackRequest = {
-                            mGlobalState.update { state-> state.copy(focusRecord = null, page = Screen.List) }
+                            videoController.stop()
+                            mPlayerState.update { state -> state.copy(isPlaying = false) }
+                            mGlobalState.update { state ->
+                                state.copy(
+                                    focusRecord = null,
+                                    page = Screen.List
+                                )
+                            }
+
                         }
                     ) as T
 

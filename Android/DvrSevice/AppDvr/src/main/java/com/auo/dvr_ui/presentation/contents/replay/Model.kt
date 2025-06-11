@@ -1,5 +1,6 @@
 package com.auo.dvr_ui.presentation.contents.replay
 
+import android.util.Log
 import android.view.SurfaceHolder
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_ui.presentation.GlobalState
@@ -55,12 +56,15 @@ internal class Model(
     override fun handleUserIntent(intent: UserIntent) {
         scope.launch {
             when (intent) {
-                is UserIntent.SurfaceReady -> ::onViewReady
+                is UserIntent.SurfaceReady -> onViewReady(intent.list)
                 is UserIntent.SeekTo -> TODO()
-                UserIntent.Back -> ::onBackRequest
-                UserIntent.Next -> ::onNextRequest
-                UserIntent.PlayStateSwitch -> if (playerState.value.isPlaying) ::onPauseRequest else ::onPlayRequest
-                UserIntent.Previous -> ::onPrevRequest
+                UserIntent.Back -> onBackRequest()
+                UserIntent.Next -> onNextRequest()
+                UserIntent.PlayStateSwitch -> {
+                    Log.d("Model", "handleUserIntent: ${playerState.value.isPlaying}")
+                    if (playerState.value.isPlaying) onPauseRequest() else onPlayRequest()
+                }
+                UserIntent.Previous -> onPrevRequest()
             }
         }
     }

@@ -66,7 +66,10 @@ internal class Model(
         scope.launch {
             Log.d("ListModel", "Intent: $intent")
             when(intent){
-                UserIntent.Delete -> deleteGroups(_state.value.selectedGroups)
+                UserIntent.Delete ->{
+                    _effect.update { null }
+                    deleteGroups(_state.value.selectedGroups)
+                }
                 is UserIntent.DisplayTypeChanged ->{
                     _state.value = _state.value.copy(displayType = intent.type)
                     updateGroups()
@@ -81,6 +84,14 @@ internal class Model(
                 UserIntent.SelectAll -> {
                     val groups  = _state.value.groupList
                     _state.value = _state.value.copy(selectedGroups = groups)
+                }
+
+                UserIntent.DeleteRequest -> {
+                    _effect.update { Effect.ConfirmDelete }
+                }
+
+                UserIntent.CancelDelete ->{
+                    _effect.update { null }
                 }
             }
         }

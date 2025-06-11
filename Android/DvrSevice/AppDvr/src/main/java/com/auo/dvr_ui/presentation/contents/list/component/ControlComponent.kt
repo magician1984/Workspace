@@ -99,12 +99,10 @@ data object ControlComponent {
             mutableStateOf(enable)
         }
         if(mVisible){
-            CommonComponents.RoundedButton(
+            CommonComponents.RoundedOutlineButton(
                 modifier = modifier,
                 label = mLabel,
-                borderColor = boardColor,
                 borderWidth = OUTLINE_BOARD_WIDTH,
-                backgroundColor = Color.Transparent,
                 textColor = Color.White,
                 onClick = onClick
             )
@@ -121,12 +119,10 @@ data object ControlComponent {
             mContext.getText(R.string.select_recording).toString()
         }
 
-        CommonComponents.RoundedButton(
+        CommonComponents.RoundedOutlineButton(
             modifier = modifier.size(config.width, config.height),
             label = mEnableSelectModeLabel,
-            borderColor = config.borderColor,
             borderWidth = config.borderWidth,
-            backgroundColor = config.backgroundColor,
             textColor = config.textColor,
             textSize = config.textSize,
             onClick = onClick
