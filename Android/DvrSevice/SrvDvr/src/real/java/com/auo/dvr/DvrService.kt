@@ -4,12 +4,14 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.os.Environment
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.auo.dvr.detector.UsbDetector
 import com.auo.dvr.observer.PollingFileObserver
 import com.auo.dvr.recordmanager.RecordManager
+import com.auo.dvr.remote.QNXServiceConnector
 import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrException
 import com.auo.dvr_core.DvrState
@@ -19,11 +21,19 @@ import com.auo.dvr_core.RecordGroup
 import java.io.File
 
 class DvrService : Service() {
-    companion object{
+    companion object {
         private const val TAG = "DvrService"
 
-        private val SRC_FOLDER =  File("/mnt/nfs", "Dvr_src").apply {
-            if(!exists())
+//        private val SRC_FOLDER =  File("/mnt/nfs", "Dvr_src").apply {
+//            if(!exists())
+//                mkdirs()
+//        }
+
+        private val SRC_FOLDER = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            "Dvr_src"
+        ).apply {
+            if (!exists())
                 mkdirs()
         }
 
@@ -34,9 +44,11 @@ class DvrService : Service() {
 
     private lateinit var mDeviceDetector: IDeviceDetector
 
-    private lateinit var mRecordManager : IRecordManager
+    private lateinit var mRecordManager: IRecordManager
 
-    private lateinit var mFileObserver : IFileObserver
+    private lateinit var mFileObserver: IFileObserver
+
+    private lateinit var mRemoteConnector: IRemoteConnector
 
     private var isInitialized: Boolean = false
 
@@ -68,17 +80,25 @@ class DvrService : Service() {
         super.onDestroy()
     }
 
-    private fun init(){
+    private fun init() {
         try {
             Log.d(TAG, "Start to init")
 
-            mFileObserver = PollingFileObserver(mFolder =  SRC_FOLDER, mInterval = POLLING_TIME_MILLISECONDS)
+            mRemoteConnector = QNXServiceConnector(rootFolder = SRC_FOLDER)
+
+            mFileObserver =
+                PollingFileObserver(mFolder = SRC_FOLDER, mInterval = POLLING_TIME_MILLISECONDS)
 
             mRecordManager = RecordManager.Builder().build()
 
             mDeviceDetector = UsbDetector(mContext = this)
 
-            mServiceApi = DvrServiceApiImpl(recordManager = mRecordManager, deviceDetector = mDeviceDetector, fileObserver = mFileObserver)
+            mServiceApi = DvrServiceApiImpl(
+                recordManager = mRecordManager,
+                deviceDetector = mDeviceDetector,
+                fileObserver = mFileObserver,
+                remoteConnector = mRemoteConnector
+            )
 
             mFileObserver.start()
 
@@ -91,15 +111,19 @@ class DvrService : Service() {
                 private val exception = DvrException("Api", "Initialize failed")
 
                 override fun getRecordGoups(): List<RecordGroup> = emptyList()
-                override fun getState(): DvrState = DvrState(false, DvrState.ErrorType.InternalError)
+                override fun getState(): DvrState =
+                    DvrState(false, DvrState.ErrorType.InternalError)
+
                 override fun getConfigure(): DvrConfigure = throwException()
-                override fun updataConfigure(configure: DvrConfigure?) : Unit = throwException()
-                override fun lockFile(recordGroup: List<RecordGroup>?) : Unit = throwException()
-                override fun unlockFile(recordGroup: List<RecordGroup>?) : Unit = throwException()
-                override fun deleteFile(recordGroup: List<RecordGroup>?) : Unit = throwException()
-                override fun registerCallback(callback: IDvrEventCallback?) : Unit = throwException()
-                override fun unregisterCallback(callback: IDvrEventCallback?) : Unit = throwException()
-                override fun unmountFlash() : Unit = throwException()
+                override fun updataConfigure(configure: DvrConfigure?): Unit = throwException()
+                override fun lockFile(recordGroup: List<RecordGroup>?): Unit = throwException()
+                override fun unlockFile(recordGroup: List<RecordGroup>?): Unit = throwException()
+                override fun deleteFile(recordGroup: List<RecordGroup>?): Unit = throwException()
+                override fun registerCallback(callback: IDvrEventCallback?): Unit = throwException()
+                override fun unregisterCallback(callback: IDvrEventCallback?): Unit =
+                    throwException()
+
+                override fun unmountFlash(): Unit = throwException()
                 private inline fun <reified T> throwException(): T {
                     throw exception
                 }
@@ -107,7 +131,7 @@ class DvrService : Service() {
         }
     }
 
-    private fun release(){
+    private fun release() {
         mFileObserver.stop()
     }
 }

@@ -273,7 +273,7 @@ class Presenter(
                     ListModel::class -> ListModel(
                         scope = mBackgroundScope,
                         globalState = mGlobalState,
-                        onUpdateRecords = { onRefreshRecords(it) },
+                        onUpdateRecords =  ::onRefreshRecords,
                         lockGroups = { findUseCase<IUseCaseLockGroups>().invoke(it) },
                         unlockGroups = { findUseCase<IUseCaseUnlockGroups>().invoke(it) },
                         deleteGroups = { findUseCase<IUseCaseDeleteGroups>().invoke(it) },

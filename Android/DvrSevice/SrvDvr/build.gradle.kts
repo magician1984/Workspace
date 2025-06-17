@@ -57,7 +57,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(project(":LibDvrCore"))
-    "realImplementation"(libs.ffmpeg.kit.full)
+//    "realImplementation"(libs.ffmpeg.kit.full)
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.kotlin)

@@ -3,9 +3,9 @@ package com.auo.dvr.recordmanager
 import android.content.Context
 import android.util.Log
 import com.auo.dvr.IRecordManager
-import com.auo.dvr.recordmanager.RecordGroupOperator.delete
-import com.auo.dvr.recordmanager.RecordGroupOperator.moveTo
-import com.auo.dvr.recordmanager.RecordGroupOperator.moveToExternal
+import com.auo.dvr.recordmanager.operator.RecordGroupOperator.delete
+import com.auo.dvr.recordmanager.operator.RecordGroupOperator.moveTo
+import com.auo.dvr.recordmanager.operator.RecordGroupOperator.moveToExternal
 import com.auo.dvr.recordmanager.cleaner.DailyRecordCleaner
 import com.auo.dvr.recordmanager.convertor.FileConvertor
 import com.auo.dvr_core.RecordGroup

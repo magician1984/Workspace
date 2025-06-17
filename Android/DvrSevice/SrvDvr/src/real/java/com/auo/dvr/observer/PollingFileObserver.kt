@@ -16,22 +16,27 @@ internal class PollingFileObserver(
     private val mPollingThread: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private var mFuture: Future<*>? = null
 
-    private val knownFiles = mutableMapOf<String, Long>() // name -> lastModified
-    private val finalizedFiles = mutableSetOf<String>()   // already closed
+    private val knownFolders = mutableMapOf<String, Long>() // name -> lastModified
+    private val finalizedFolders = mutableSetOf<String>()   // already closed
 
     private var mCallback : IFileObserver.OnEventCallback? = null
 
     override fun start() {
-        mFolder.listFiles()?.forEach { file ->
-            knownFiles[file.name] = file.lastModified()
-            if (file.canExecute()) {
-                onEvent(EventType.Exist, file)
-                finalizedFiles.add(file.name)
-            }else{
-                onEvent(EventType.Create, file)
+        // 先掃描現有已完成資料夾
+        val existingFolders = mFolder.listFiles()?.filter { it.isDirectory } ?: emptyList()
+
+        for (folder in existingFolders) {
+            val folderName = folder.name
+            if (finalizedFolders.contains(folderName)) continue
+
+            val readyFile = File(folder, ".ready")
+            if (readyFile.exists()) {
+                onEvent(EventType.Close, folder)
+                finalizedFolders.add(folderName)
             }
         }
 
+        // 再啟動定時輪詢
         mFuture = mPollingThread.scheduleWithFixedDelay(runnable, 0, mInterval, TimeUnit.MILLISECONDS)
     }
 
@@ -41,38 +46,27 @@ internal class PollingFileObserver(
     }
 
     override fun setOnEventCallback(callback: IFileObserver.OnEventCallback) {
-        TODO("Not yet implemented")
+        mCallback = callback
     }
 
     private val runnable: Runnable = Runnable {
-        val currentFiles = mFolder.listFiles()?.associateBy({ it.name }, { it }) ?: return@Runnable
-        val now = System.currentTimeMillis()
+        val folders = mFolder.listFiles()?.filter { it.isDirectory } ?: return@Runnable
 
-        // 1. Detect created or modified
-        for ((name, file) in currentFiles) {
-            val lastMod = file.lastModified()
-            val prevMod = knownFiles[name]
+        for (folder in folders) {
+            val folderName = folder.name
+            val readyFile = File(folder, ".ready")
 
-            if (prevMod == null) {
-                onEvent(EventType.Create, file)
+            // 第一次看到，先發 Create 事件
+            if (!knownFolders.contains(folderName)) {
+                onEvent(EventType.Create, folder)
+                knownFolders[folderName] = folder.lastModified()
             }
 
-            knownFiles[name] = lastMod
-
-            // 2. Check if file is now "ready" (has executable permission)
-            if (file.canExecute() && !finalizedFiles.contains(name)) {
-                onEvent(EventType.Close, file)
-                finalizedFiles.add(name)
+            // 若未完成，檢查 .ready 是否出現 → Close
+            if (!finalizedFolders.contains(folderName) && readyFile.exists()) {
+                onEvent(EventType.Close, folder)
+                finalizedFolders.add(folderName)
             }
-        }
-
-        // 3. Detect deleted
-        val deletedNames = knownFiles.keys - currentFiles.keys
-        for (name in deletedNames) {
-            val deletedFile = File(mFolder, name)
-            onEvent(EventType.Delete, deletedFile)
-            knownFiles.remove(name)
-            finalizedFiles.remove(name)
         }
     }
 

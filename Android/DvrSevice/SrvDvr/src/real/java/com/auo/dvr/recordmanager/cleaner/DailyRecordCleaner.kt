@@ -1,7 +1,7 @@
 package com.auo.dvr.recordmanager.cleaner
 
 import com.auo.dvr.recordmanager.ICleaner
-import com.auo.dvr.recordmanager.RecordGroupOperator.delete
+import com.auo.dvr.recordmanager.operator.RecordGroupOperator.delete
 import com.auo.dvr_core.RecordGroup
 
 /***

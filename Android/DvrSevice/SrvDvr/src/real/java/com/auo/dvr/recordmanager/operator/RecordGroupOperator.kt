@@ -1,7 +1,8 @@
-package com.auo.dvr.recordmanager
+package com.auo.dvr.recordmanager.operator
 
 import android.net.Uri
 import androidx.core.net.toFile
+import com.auo.dvr.recordmanager.IConvertor
 import com.auo.dvr_core.DvrException
 import com.auo.dvr_core.RecordFile
 import com.auo.dvr_core.RecordGroup
@@ -14,6 +15,7 @@ object RecordGroupOperator {
         get() = this.timestamp.toString()
 
     internal fun RecordGroup.moveToExternal(root: File): RecordGroup {
+        val originalFolder = this.uri.toFile()
         val targetFolder = File(root, this.name)
 
         val newFiles : List<RecordFile> = buildList {
@@ -23,7 +25,14 @@ object RecordGroupOperator {
             }
         }
 
-        return RecordGroup(timestamp = this.timestamp, files = newFiles, type = this.type, uri = Uri.fromFile(targetFolder))
+        return RecordGroup(
+            timestamp = this.timestamp,
+            files = newFiles,
+            type = this.type,
+            uri = Uri.fromFile(targetFolder)
+        ).also {
+            originalFolder.deleteRecursively()
+        }
     }
 
     internal fun RecordGroup.moveTo(root: File, convertor: IConvertor): RecordGroup {
@@ -75,4 +84,3 @@ object RecordGroupOperator {
         }
     }
 }
-
