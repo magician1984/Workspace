@@ -1,6 +1,12 @@
 package com.auo.dvr_ui.presentation.contents.list
 
 import android.content.Context
+import android.util.Log
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,11 +20,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.grid.LazyGridLayoutInfo
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -39,6 +48,7 @@ import com.auo.dvr_ui.presentation.contents.list.component.TabComponent
 import kotlinx.coroutines.flow.StateFlow
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.math.roundToInt
 
 internal class View(
     state: StateFlow<UiState>,
@@ -192,47 +202,48 @@ internal class View(
     }
 
     @Composable
-    private fun Scrollbar(
-        modifier: Modifier,
+    fun Scrollbar(
+        modifier: Modifier = Modifier,
         scrollState: LazyGridState,
         backgroundColor: Color,
         trackColor: Color,
         trackHeight: Dp
     ) {
+        printLazyGridState(scrollState)
         val layoutInfo = scrollState.layoutInfo
-        val totalItems = layoutInfo.totalItemsCount
-        val visibleItems = layoutInfo.visibleItemsInfo.size
-        val viewportHeight = layoutInfo.viewportSize.height
+        val density = LocalDensity.current
+        val viewportHeightPx = layoutInfo.viewportSize.height.toFloat()
 
-        val scrollFraction = remember(layoutInfo) {
-            val viewportHeightPx = layoutInfo.viewportSize.height
-            val itemCount = layoutInfo.totalItemsCount
-            val visibleItems = layoutInfo.visibleItemsInfo
+        // 計算 scrollFraction — 使用真實 item offset 與 viewport range
+        val scrollFraction by remember {
+            derivedStateOf {
+                val items = layoutInfo.visibleItemsInfo
+                if (items.isEmpty()) return@derivedStateOf 0f
 
-            if (itemCount == 0 || visibleItems.isEmpty()) return@remember 0f
+                val firstItemOffset = items.first().offset
+                val scrollOffset = layoutInfo.viewportStartOffset - firstItemOffset.y
 
-            val firstItem = visibleItems.first()
-            val lastItem = visibleItems.last()
+                val lastItem = items.last()
+                val totalContentHeight = lastItem.offset.y + lastItem.size.height
+                val scrollableHeight = (totalContentHeight - viewportHeightPx).coerceAtLeast(1f)
 
-            val firstIndex = scrollState.firstVisibleItemIndex
-            val offset = scrollState.firstVisibleItemScrollOffset
-
-            // 總內容高度的估算（以單個 item 高度 × 總數量）
-            val averageItemHeight = visibleItems.sumOf { it.size.height } / visibleItems.size
-            val totalContentHeight = itemCount * averageItemHeight
-
-            // 當前的 scroll position（pixel）
-            val scrolledPixels = firstIndex * averageItemHeight + offset
-
-            // 滾動比例
-            (scrolledPixels / (totalContentHeight - viewportHeightPx).toFloat()
-                .coerceAtLeast(1f)).coerceIn(0f, 1f)
+                (scrollOffset / scrollableHeight).coerceIn(0f, 1f)
+            }
         }
 
-        val offsetY = with(LocalDensity.current) {
-            ((viewportHeight - trackHeight.toPx()) * scrollFraction).toInt()
+        // 滑塊 offset 動畫
+        val animatedOffsetY = remember { Animatable(0f) }
+
+        LaunchedEffect(scrollFraction, viewportHeightPx, trackHeight) {
+            val trackHeightPx = with(density) { trackHeight.toPx() }
+            val targetOffset = (viewportHeightPx - trackHeightPx) * scrollFraction
+            animatedOffsetY.animateTo(
+                targetValue = targetOffset,
+                animationSpec = tween(durationMillis = 80, easing = LinearEasing)
+            )
         }
 
+        // UI 畫出 scrollbar
         Box(
             modifier = modifier
                 .width(8.dp)
@@ -243,9 +254,37 @@ internal class View(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(trackHeight)
-                    .offset { IntOffset(0, offsetY) }
+                    .offset { IntOffset(0, animatedOffsetY.value.roundToInt()) }
                     .background(trackColor, RoundedCornerShape(50))
             )
         }
+    }
+
+    fun printLazyGridState(state: LazyGridState) {
+        val tag = "Scroll"
+        Log.d(tag, "===== LazyGridState =====")
+        Log.d(tag, "firstVisibleItemIndex: ${state.firstVisibleItemIndex}")
+        Log.d(tag, "firstVisibleItemScrollOffset: ${state.firstVisibleItemScrollOffset}")
+        Log.d(tag, "isScrollInProgress: ${state.isScrollInProgress}")
+        Log.d(tag, "canScrollForward: ${state.canScrollForward}")
+        Log.d(tag, "canScrollBackward: ${state.canScrollBackward}")
+        Log.d(tag, "lastScrolledForward: ${state.lastScrolledForward}")
+        Log.d(tag, "lastScrolledBackward: ${state.lastScrolledBackward}")
+
+        val layoutInfo = state.layoutInfo
+        Log.d(tag, "--- LayoutInfo summary ---")
+        Log.d(tag, "mainAxisItemSpacing: ${layoutInfo.mainAxisItemSpacing}")
+        Log.d(tag, "totalItemsCount: ${layoutInfo.totalItemsCount}")
+        Log.d(tag, "viewportSize: ${layoutInfo.viewportSize.width} x ${layoutInfo.viewportSize.height}")
+        Log.d(tag, "visibleItems count: ${layoutInfo.visibleItemsInfo.size}")
+        Log.d(tag, "viewportStartOffset: ${layoutInfo.viewportStartOffset}")
+        Log.d(tag, "viewportEndOffset: ${layoutInfo.viewportEndOffset}")
+        Log.d(tag, "reverseLayout: ${layoutInfo.reverseLayout}")
+        Log.d(tag, "orientation: ${layoutInfo.orientation}")
+        Log.d(tag, "maxSpan: ${layoutInfo.maxSpan}")
+        if(layoutInfo.visibleItemsInfo.isNotEmpty()){
+            Log.d(tag, "item height: ${layoutInfo.visibleItemsInfo[0].size.height}")
+        }
+        Log.d(tag, "===========================")
     }
 }
