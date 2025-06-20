@@ -69,9 +69,6 @@ android {
     productFlavors {
         create("mock") {
             dimension = "prototype"
-            ndk {
-                abiFilters += listOf("arm64-v8a")
-            }
         }
         create("real") {
             dimension = "prototype"

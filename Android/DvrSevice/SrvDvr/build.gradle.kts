@@ -43,10 +43,6 @@ android {
         }
         create("real") {
             dimension = "prototype"
-
-            ndk {
-                abiFilters += listOf("arm64-v8a")
-            }
         }
     }
 }
