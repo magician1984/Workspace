@@ -78,6 +78,8 @@ internal class RecordManager private constructor(
     }
 
     override fun onRecordGroupCreated(groupFolder: File) {
+        Log.d("RecordManager", "onRecordGroupCreated: ${groupFolder.path}")
+
         if (groupFolder.isFile)
             return
 
@@ -95,7 +97,6 @@ internal class RecordManager private constructor(
 
             mOnRecordUpdateListener?.onUpdate()
         }, onNotAvailable = {})
-
     }
 
 

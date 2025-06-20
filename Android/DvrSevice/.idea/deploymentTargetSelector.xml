@@ -15,10 +15,10 @@
       </SelectionState>
       <SelectionState runConfigName="AppDvr">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-06-05T09:15:09.616292349Z">
+        <DropdownSelection timestamp="2025-06-20T06:40:38.444288400Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=/home/bruce/.android/avd/7255_Dev.avd" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=db798f3d" />
             </handle>
           </Target>
         </DropdownSelection>

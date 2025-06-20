@@ -1,5 +1,6 @@
 package com.auo.dvr.observer
 
+import android.util.Log
 import com.auo.dvr.IFileObserver
 import com.auo.dvr.IFileObserver.EventType
 import java.io.File
@@ -23,6 +24,7 @@ internal class PollingFileObserver(
 
     override fun start() {
         // 先掃描現有已完成資料夾
+        Log.d("PollingFileObserver", "start polling: ${mFolder.path}")
         val existingFolders = mFolder.listFiles()?.filter { it.isDirectory } ?: emptyList()
 
         for (folder in existingFolders) {
@@ -50,9 +52,14 @@ internal class PollingFileObserver(
     }
 
     private val runnable: Runnable = Runnable {
-        val folders = mFolder.listFiles()?.filter { it.isDirectory } ?: return@Runnable
+        Log.d("PollingFileObserver", "polling")
+        val folders = mFolder.listFiles() ?: return@Runnable
 
+        Log.d("PollingFileObserver", "folders: ${folders.size}")
         for (folder in folders) {
+            Log.d("PollingFileObserver", "folder: ${folder.name}")
+            if(folder.isFile)
+                return@Runnable
             val folderName = folder.name
             val readyFile = File(folder, ".ready")
 

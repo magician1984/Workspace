@@ -8,6 +8,7 @@ import android.os.Environment
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.auo.dvr.detector.MockDetector
 import com.auo.dvr.detector.UsbDetector
 import com.auo.dvr.observer.PollingFileObserver
 import com.auo.dvr.recordmanager.RecordManager
@@ -24,18 +25,18 @@ class DvrService : Service() {
     companion object {
         private const val TAG = "DvrService"
 
-//        private val SRC_FOLDER =  File("/mnt/nfs", "Dvr_src").apply {
-//            if(!exists())
-//                mkdirs()
-//        }
-
-        private val SRC_FOLDER = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-            "Dvr_src"
-        ).apply {
-            if (!exists())
+        private val SRC_FOLDER =  File("/mnt/nfs", "Dvr_src").apply {
+            if(!exists())
                 mkdirs()
         }
+
+//        private val SRC_FOLDER = File(
+//            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+//            "Dvr_src"
+//        ).apply {
+//            if (!exists())
+//                mkdirs()
+//        }
 
         private const val POLLING_TIME_MILLISECONDS = 3000L
     }
@@ -91,7 +92,12 @@ class DvrService : Service() {
 
             mRecordManager = RecordManager.Builder().build()
 
-            mDeviceDetector = UsbDetector(mContext = this)
+//            mDeviceDetector = UsbDetector(mContext = this)
+
+            mDeviceDetector = MockDetector(File(cacheDir, "mock_target").apply {
+                if(!this.exists())
+                    this.mkdirs()
+            })
 
             mServiceApi = DvrServiceApiImpl(
                 recordManager = mRecordManager,
