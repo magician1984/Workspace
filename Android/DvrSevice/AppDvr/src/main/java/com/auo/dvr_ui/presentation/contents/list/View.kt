@@ -170,15 +170,16 @@ internal class View(
                 )
             }
 
-            Scrollbar(
+            ListComponent.Scrollbar(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .size(8.dp, 800.dp)
-                    .offset(x = (-59).dp),
+                    .width(8.dp)
+                    .offset(x = (-59).dp)
+                    .padding(top = 120.dp, bottom = 100.dp),
                 scrollState = scrollState,
                 backgroundColor = Color.DarkGray,
                 trackColor = highlightColor,
-                trackHeight = 80.dp
+                thumbHeight = 80.dp
             )
         }
 
@@ -199,92 +200,5 @@ internal class View(
 
             null -> {}
         }
-    }
-
-    @Composable
-    fun Scrollbar(
-        modifier: Modifier = Modifier,
-        scrollState: LazyGridState,
-        backgroundColor: Color,
-        trackColor: Color,
-        trackHeight: Dp
-    ) {
-        printLazyGridState(scrollState)
-        val layoutInfo = scrollState.layoutInfo
-        val density = LocalDensity.current
-        val viewportHeightPx = layoutInfo.viewportSize.height.toFloat()
-
-        // 計算 scrollFraction — 使用真實 item offset 與 viewport range
-        val scrollFraction by remember {
-            derivedStateOf {
-                val items = layoutInfo.visibleItemsInfo
-                if (items.isEmpty()) return@derivedStateOf 0f
-
-                val firstItemOffset = items.first().offset
-                val scrollOffset = layoutInfo.viewportStartOffset - firstItemOffset.y
-
-                val lastItem = items.last()
-                val totalContentHeight = lastItem.offset.y + lastItem.size.height
-                val scrollableHeight = (totalContentHeight - viewportHeightPx).coerceAtLeast(1f)
-
-                (scrollOffset / scrollableHeight).coerceIn(0f, 1f)
-            }
-        }
-
-        // 滑塊 offset 動畫
-        val animatedOffsetY = remember { Animatable(0f) }
-
-        LaunchedEffect(scrollFraction, viewportHeightPx, trackHeight) {
-            val trackHeightPx = with(density) { trackHeight.toPx() }
-            val targetOffset = (viewportHeightPx - trackHeightPx) * scrollFraction
-            animatedOffsetY.animateTo(
-                targetValue = targetOffset,
-                animationSpec = tween(durationMillis = 80, easing = LinearEasing)
-            )
-        }
-
-        // UI 畫出 scrollbar
-        Box(
-            modifier = modifier
-                .width(8.dp)
-                .fillMaxHeight()
-                .background(backgroundColor, RoundedCornerShape(50))
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(trackHeight)
-                    .offset { IntOffset(0, animatedOffsetY.value.roundToInt()) }
-                    .background(trackColor, RoundedCornerShape(50))
-            )
-        }
-    }
-
-    fun printLazyGridState(state: LazyGridState) {
-        val tag = "Scroll"
-        Log.d(tag, "===== LazyGridState =====")
-        Log.d(tag, "firstVisibleItemIndex: ${state.firstVisibleItemIndex}")
-        Log.d(tag, "firstVisibleItemScrollOffset: ${state.firstVisibleItemScrollOffset}")
-        Log.d(tag, "isScrollInProgress: ${state.isScrollInProgress}")
-        Log.d(tag, "canScrollForward: ${state.canScrollForward}")
-        Log.d(tag, "canScrollBackward: ${state.canScrollBackward}")
-        Log.d(tag, "lastScrolledForward: ${state.lastScrolledForward}")
-        Log.d(tag, "lastScrolledBackward: ${state.lastScrolledBackward}")
-
-        val layoutInfo = state.layoutInfo
-        Log.d(tag, "--- LayoutInfo summary ---")
-        Log.d(tag, "mainAxisItemSpacing: ${layoutInfo.mainAxisItemSpacing}")
-        Log.d(tag, "totalItemsCount: ${layoutInfo.totalItemsCount}")
-        Log.d(tag, "viewportSize: ${layoutInfo.viewportSize.width} x ${layoutInfo.viewportSize.height}")
-        Log.d(tag, "visibleItems count: ${layoutInfo.visibleItemsInfo.size}")
-        Log.d(tag, "viewportStartOffset: ${layoutInfo.viewportStartOffset}")
-        Log.d(tag, "viewportEndOffset: ${layoutInfo.viewportEndOffset}")
-        Log.d(tag, "reverseLayout: ${layoutInfo.reverseLayout}")
-        Log.d(tag, "orientation: ${layoutInfo.orientation}")
-        Log.d(tag, "maxSpan: ${layoutInfo.maxSpan}")
-        if(layoutInfo.visibleItemsInfo.isNotEmpty()){
-            Log.d(tag, "item height: ${layoutInfo.visibleItemsInfo[0].size.height}")
-        }
-        Log.d(tag, "===========================")
     }
 }

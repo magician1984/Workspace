@@ -17,6 +17,12 @@ class DvrService : Service() {
 
     override fun onCreate() {
         try{
+            cacheDir.listFiles()?.forEach {
+                if(it.exists()){
+                    it.delete()
+                }
+            }
+
             mServiceApi = ServiceApiImpl(this)
 
             isInitialized = true

@@ -7,20 +7,20 @@ android {
     namespace = "com.auo.dvr_ui"
     compileSdk = 35
 
-    signingConfigs{
-        getByName("debug"){
-            keyAlias = "platform"
-            keyPassword = "123456"
-            storeFile = file("/mnt/Workspace/Projects/Side/Workspace/Android/DvrSevice/keys/ES9/platform.keystore")
-            storePassword = "123456"
-        }
-        create("release") {
-            keyAlias = "platform"
-            keyPassword = "123456"
-            storeFile = file("/mnt/Workspace/Projects/Side/Workspace/Android/DvrSevice/keys/ES9/platform.keystore")
-            storePassword = "123456"
-        }
-    }
+//    signingConfigs{
+//        getByName("debug"){
+//            keyAlias = "platform"
+//            keyPassword = "123456"
+//            storeFile = file("/mnt/Workspace/Projects/Side/Workspace/Android/DvrSevice/keys/ES9/platform.keystore")
+//            storePassword = "123456"
+//        }
+//        create("release") {
+//            keyAlias = "platform"
+//            keyPassword = "123456"
+//            storeFile = file("/mnt/Workspace/Projects/Side/Workspace/Android/DvrSevice/keys/ES9/platform.keystore")
+//            storePassword = "123456"
+//        }
+//    }
 
     defaultConfig {
         applicationId = "com.auo.dvr_ui"

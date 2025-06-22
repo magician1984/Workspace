@@ -2,6 +2,7 @@ package com.auo.dvr
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.auo.dvr_core.CamLocation
 import com.auo.dvr_core.DvrConfigure
 import com.auo.dvr_core.DvrState
@@ -12,11 +13,15 @@ import com.auo.dvr_core.RecordFile
 import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_core.RecordResolution
 import com.auo.dvr_core.RecordType
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 
 class ServiceApiImpl(private val context: Context) : IDvrService.Stub() {
     companion object {
-        private const val MOCK_FILE = "mock_video.ts"
-        private const val MOCK_THUMBNAIL = "mock_video.png"
+        private const val MOCK_FOLDER = "mock_record"
+        private const val MOCK_VIDEO_EXTENSION = ".ts"
+        private const val MOCK_THUMBNAIL_EXTENSION = ".nv12"
         private const val MOCK_RECORD_COUNT = 50
     }
 
@@ -37,18 +42,26 @@ class ServiceApiImpl(private val context: Context) : IDvrService.Stub() {
     private var mDvrEventCallback: MutableList<IDvrEventCallback> = mutableListOf()
 
     init {
-        // Copy mock video to Cache folder from assets
-        val inputStream = context.assets.open(MOCK_FILE)
-        val outputStream = context.openFileOutput(MOCK_FILE, Context.MODE_PRIVATE)
-        inputStream.copyTo(outputStream)
-        inputStream.close()
-        outputStream.close()
+        val targetFolder = File(context.filesDir, MOCK_FOLDER).apply {
+            if (!exists())
+                mkdirs()
+        }
+        // Copy mock folder to Cache folder from assets
+        val mockFiles = context.assets.list(MOCK_FOLDER)
 
-        // Copy mock thumbnail to Cache folder from assets
-        val thumbnailInputStream = context.assets.open(MOCK_THUMBNAIL)
-        val thumbnailOutputStream = context.openFileOutput(MOCK_THUMBNAIL, Context.MODE_PRIVATE)
-        thumbnailInputStream.copyTo(thumbnailOutputStream)
-        thumbnailInputStream.close()
+        mockFiles?.forEach { mockFile ->
+            val targetFile = File(targetFolder, mockFile)
+
+            try{
+                context.assets.open("$MOCK_FOLDER/$mockFile").use { inputStream ->
+                    FileOutputStream(targetFile).use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+            }catch (e : IOException){
+                Log.e("ServiceApiImpl", "Create mock file failed ", e)
+            }
+        }
 
         // Generate mock data. the time duration is 1 min
         val durationMs = 60L * 1000L
@@ -63,8 +76,8 @@ class ServiceApiImpl(private val context: Context) : IDvrService.Stub() {
                             location.name,
                             timestamp,
                             location,
-                            Uri.fromFile(context.getFileStreamPath(MOCK_FILE)),
-                            Uri.fromFile(context.getFileStreamPath(MOCK_THUMBNAIL))
+                            Uri.fromFile(File(targetFolder, "$location$MOCK_VIDEO_EXTENSION")),
+                            Uri.fromFile(File(targetFolder, "$location$MOCK_THUMBNAIL_EXTENSION"))
                         )
                     )
                 }
