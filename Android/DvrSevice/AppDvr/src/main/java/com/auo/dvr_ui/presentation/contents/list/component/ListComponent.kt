@@ -327,6 +327,10 @@ data object ListComponent {
     }
 
     fun Uri.toBitmap(context: Context, width: Int, height: Int): Bitmap? {
+        // 目標縮小尺寸
+        val targetWidth = width / 2
+        val targetHeight = height / 2
+
         // 產生快取檔名
         val cacheKey = "${this.hashCode()}_${width}x$height.jpg"
         val cacheFile = File(context.cacheDir, cacheKey)
@@ -348,11 +352,18 @@ data object ListComponent {
         val jpegOut = ByteArrayOutputStream()
         yuvImage.compressToJpeg(Rect(0, 0, width, height), 90, jpegOut)
 
-        // 儲存至 cache folder
-        val jpegBytes = jpegOut.toByteArray()
-        FileOutputStream(cacheFile).use { it.write(jpegBytes) }
+        // 解碼成 Bitmap（原始大小）
+        val originalBitmap = BitmapFactory.decodeByteArray(jpegOut.toByteArray(), 0, jpegOut.size())
 
-        return BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.size)
+        // ✅ 縮小成 1/4（長寬各縮 1/2）
+        val scaledBitmap = Bitmap.createScaledBitmap(originalBitmap, targetWidth, targetHeight, true)
+
+        // ✅ 儲存為 JPEG
+        FileOutputStream(cacheFile).use { out ->
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+        }
+
+        return scaledBitmap
     }
 
     private fun RecordGroup.getThumbnail(): Uri {
