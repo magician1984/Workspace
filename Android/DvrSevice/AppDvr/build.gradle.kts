@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.cxx.configure.abiOf
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
@@ -69,11 +71,15 @@ android {
     productFlavors {
         create("mock") {
             dimension = "prototype"
+            ndk{
+                abiFilters += listOf("x86_64")
+            }
         }
         create("real") {
             dimension = "prototype"
-
-
+            ndk{
+                abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+            }
         }
     }
 }

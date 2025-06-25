@@ -3,14 +3,8 @@ package com.auo.dvr_ui.presentation.contents.list.component
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.ImageFormat
-import android.graphics.Rect
-import android.graphics.YuvImage
 import android.net.Uri
 import android.util.Log
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,7 +12,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,7 +27,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,19 +47,18 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.auo.dvr_core.RecordGroup
 import com.auo.dvr_core.RecordType
 import com.auo.dvr_ui.R
+import com.auo.dvr_ui.presentation.contents.ImageUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.text.DateFormat
 import java.util.Date
 import kotlin.math.roundToInt
+import androidx.core.graphics.scale
 
 data object ListComponent {
     data class ItemStyle(val highlightColor: Color, val dateFormat: DateFormat)
@@ -256,21 +247,22 @@ data object ListComponent {
         trackColor: Color,
         thumbHeight: Dp = 48.dp // 固定滑塊高度
     ) {
-        if(scrollState.layoutInfo.totalItemsCount == 0) return
+        if (scrollState.layoutInfo.totalItemsCount == 0) return
 
         val layoutInfo = scrollState.layoutInfo
         val itemCount = layoutInfo.totalItemsCount
         val spanCount = layoutInfo.maxSpan.coerceAtLeast(1)
 
-        val totalRowCount = (itemCount / spanCount) + 0
+        val totalRowCount = (itemCount / spanCount) + if (itemCount % spanCount > 0) 1 else 0
         val averageItemHeight = layoutInfo.visibleItemsInfo
             .map { it.size.height }
             .takeIf { it.isNotEmpty() }
             ?.average()?.toFloat() ?: 1f
 
-        val itemSpacing = -ITEM_VERTICAL_PADDING.value
+        val itemSpacing = ITEM_VERTICAL_PADDING.value
 //        val itemSpacing = layoutInfo.mainAxisItemSpacing
-        val totalContentHeight = totalRowCount * averageItemHeight + (totalRowCount - 1) * itemSpacing
+        val totalContentHeight =
+            totalRowCount * averageItemHeight + (totalRowCount - 1) * itemSpacing
 
         val viewportHeightPx = layoutInfo.viewportSize.height.toFloat()
         val scrollableRange = (totalContentHeight - viewportHeightPx).coerceAtLeast(1f)
@@ -278,7 +270,8 @@ data object ListComponent {
         val thumbHeightPx = with(LocalDensity.current) { thumbHeight.toPx() }
         val movableRange = (viewportHeightPx - thumbHeightPx).coerceAtLeast(0f)
 
-        val scrollOffset = (scrollState.firstVisibleItemIndex / layoutInfo.maxSpan) * averageItemHeight + scrollState.firstVisibleItemScrollOffset
+        val scrollOffset =
+            (scrollState.firstVisibleItemIndex / layoutInfo.maxSpan) * averageItemHeight + scrollState.firstVisibleItemScrollOffset
         val scrollFraction = (movableRange / scrollableRange).coerceIn(0f, 1f)
         val scrollbarOffsetY = scrollFraction * scrollOffset
 
@@ -296,34 +289,6 @@ data object ListComponent {
                     .background(trackColor, RoundedCornerShape(50))
             )
         }
-    }
-
-    fun printLazyGridState(state: LazyGridState) {
-        val tag = "Scroll"
-        Log.d(tag, "===== LazyGridState =====")
-        Log.d(tag, "firstVisibleItemIndex: ${state.firstVisibleItemIndex}")
-        Log.d(tag, "firstVisibleItemScrollOffset: ${state.firstVisibleItemScrollOffset}")
-        Log.d(tag, "isScrollInProgress: ${state.isScrollInProgress}")
-        Log.d(tag, "canScrollForward: ${state.canScrollForward}")
-        Log.d(tag, "canScrollBackward: ${state.canScrollBackward}")
-        Log.d(tag, "lastScrolledForward: ${state.lastScrolledForward}")
-        Log.d(tag, "lastScrolledBackward: ${state.lastScrolledBackward}")
-
-        val layoutInfo = state.layoutInfo
-        Log.d(tag, "--- LayoutInfo summary ---")
-        Log.d(tag, "mainAxisItemSpacing: ${layoutInfo.mainAxisItemSpacing}")
-        Log.d(tag, "totalItemsCount: ${layoutInfo.totalItemsCount}")
-        Log.d(tag, "viewportSize: ${layoutInfo.viewportSize.width} x ${layoutInfo.viewportSize.height}")
-        Log.d(tag, "visibleItems count: ${layoutInfo.visibleItemsInfo.size}")
-        Log.d(tag, "viewportStartOffset: ${layoutInfo.viewportStartOffset}")
-        Log.d(tag, "viewportEndOffset: ${layoutInfo.viewportEndOffset}")
-        Log.d(tag, "reverseLayout: ${layoutInfo.reverseLayout}")
-        Log.d(tag, "orientation: ${layoutInfo.orientation}")
-        Log.d(tag, "maxSpan: ${layoutInfo.maxSpan}")
-        if(layoutInfo.visibleItemsInfo.isNotEmpty()){
-            Log.d(tag, "item height: ${layoutInfo.visibleItemsInfo[0].size.height}")
-        }
-        Log.d(tag, "===========================")
     }
 
     fun Uri.toBitmap(context: Context, width: Int, height: Int): Bitmap? {
@@ -344,19 +309,11 @@ data object ListComponent {
         val inputStream = context.contentResolver.openInputStream(this) ?: return null
         val nv12Bytes = inputStream.use { it.readBytes() }
 
-        // 轉成 NV21（UV 交錯順序：NV12 = UVUV, NV21 = VUVU）
-        val nv21Bytes = nv12ToNv21(nv12Bytes, width, height)
-
-        // 建立 YuvImage 並壓成 JPEG
-        val yuvImage = YuvImage(nv21Bytes, ImageFormat.NV21, width, height, null)
-        val jpegOut = ByteArrayOutputStream()
-        yuvImage.compressToJpeg(Rect(0, 0, width, height), 90, jpegOut)
-
         // 解碼成 Bitmap（原始大小）
-        val originalBitmap = BitmapFactory.decodeByteArray(jpegOut.toByteArray(), 0, jpegOut.size())
+        val originalBitmap = ImageUtils.uyvy422ToBitmap(nv12Bytes, width, height)
 
         // ✅ 縮小成 1/4（長寬各縮 1/2）
-        val scaledBitmap = Bitmap.createScaledBitmap(originalBitmap, targetWidth, targetHeight, true)
+        val scaledBitmap = originalBitmap.scale(targetWidth, targetHeight)
 
         // ✅ 儲存為 JPEG
         FileOutputStream(cacheFile).use { out ->
@@ -368,25 +325,5 @@ data object ListComponent {
 
     private fun RecordGroup.getThumbnail(): Uri {
         return files[0].thumbnail
-    }
-
-    private fun nv12ToNv21(src: ByteArray, width: Int, height: Int): ByteArray {
-        val frameSize = width * height
-        val nv21 = ByteArray(frameSize * 3 / 2)
-
-        // Copy Y plane
-        System.arraycopy(src, 0, nv21, 0, frameSize)
-
-        // Convert UV (NV12) → VU (NV21)
-        var i = 0
-        while (i < frameSize / 2) {
-            val u = src[frameSize + i]
-            val v = src[frameSize + i + 1]
-            nv21[frameSize + i] = v
-            nv21[frameSize + i + 1] = u
-            i += 2 // 手動步進
-        }
-
-        return nv21
     }
 }
