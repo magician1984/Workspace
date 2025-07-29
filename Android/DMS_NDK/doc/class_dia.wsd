@@ -1,0 +1,87 @@
+@startuml
+
+hide empty members
+
+rectangle dms_service_api{
+    struct FrameData_t{
+        uint64_t length
+        void* ptr
+        uint64_t timestampNano
+    }
+
+    interface FrameProcessorBase{
+        void onFrameInput(FrameData_t)
+    }
+
+    class DmsService{
+        void start()
+        void stop()
+    }
+}
+
+rectangle dms_service{
+    
+
+    enum SocketCommand_e{
+        SOCKET_COMMAND_INVIALID = -1,
+        SOCKET_COMMAND_STOP = 0,
+        SOCKET_COMMAND_START,
+        SOCKET_COMMAND_MAX
+    }
+
+    enum SocketEvent_e{
+        SOCKET_EVENT_INVIALID = -1,
+        SOCKET_EVENT_MAX,
+    }
+
+    interface VideoProcessBase{
+        void start()
+        void stop()
+        void onFrameInput(FrameData_t)
+        void notifyEvent(uint32_t event)
+    }
+    interface VideoInput{
+        void start(Callback)
+        void stop()
+    }
+    interface VideoBuffer{
+        bool allocate(uint64_t, uint32_t)
+        bool release()
+        uint64_t cloneBuffer(uint32_t, void **)
+    }
+    
+
+    class VideoProcessImpl{
+    }
+    class VideoInputImpl{
+        Camera input
+    }
+    class VideoBufferImpl{
+        Memory management
+    }
+
+    VideoProcessBase <|.. VideoProcessImpl
+    VideoInput <|.. VideoInputImpl
+    VideoBuffer <|.. VideoBufferImpl
+
+    VideoProcessImpl -> VideoInput
+    VideoInputImpl -> VideoBuffer
+
+    interface Logging <<API>>{
+        LOG_E(...)
+        LOG_D(...)
+        LOG_I(...)
+    }
+}
+
+rectangle customer{
+    class FrameProcessor
+
+    FrameProcessorBase <|..FrameProcessor
+}
+
+SocketCommand_e -[hidden] SocketEvent_e
+
+SocketCommand_e --[hidden] Logging
+
+@enduml

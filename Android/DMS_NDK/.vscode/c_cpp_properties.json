@@ -1,0 +1,17 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/third_party/opencv/include",
+                "${workspaceFolder}/api",
+                "${workspaceFolder}/inc",
+                "/mnt/Workspace/.Android/Sdk/ndk/28.0.12674087/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc"
+        }
+    ],
+    "version": 4
+}
