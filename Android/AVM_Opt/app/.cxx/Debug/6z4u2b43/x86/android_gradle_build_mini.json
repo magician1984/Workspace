@@ -1,0 +1,27 @@
+{
+  "buildFiles": [
+    "/mnt/Workspace/Projects/Side/Workspace/Android/AVM_Opt/app/src/main/cpp/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/mnt/Workspace/.Android/Sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/mnt/Workspace/Projects/Side/Workspace/Android/AVM_Opt/app/.cxx/Debug/6z4u2b43/x86",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/mnt/Workspace/.Android/Sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/mnt/Workspace/Projects/Side/Workspace/Android/AVM_Opt/app/.cxx/Debug/6z4u2b43/x86",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "avm::@6890427a1f51a3e7e1df": {
+      "artifactName": "avm",
+      "abi": "x86",
+      "output": "/mnt/Workspace/Projects/Side/Workspace/Android/AVM_Opt/app/build/intermediates/cxx/Debug/6z4u2b43/obj/x86/libavm.so",
+      "runtimeFiles": []
+    }
+  }
+}
